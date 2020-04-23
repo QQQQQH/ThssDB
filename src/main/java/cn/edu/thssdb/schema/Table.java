@@ -97,7 +97,7 @@ public class Table implements Iterable<Row> {
 
     private void serialize() {
         // TODO
-        File dir = new File(databaseName+File.separator+"table");
+        File dir = new File(databaseName+File.separator+"data");
         if (!dir.exists() && !dir.mkdirs()) {
             System.err.print("Fail to serialize due to mkdirs error!");
             return;
@@ -117,7 +117,7 @@ public class Table implements Iterable<Row> {
 
     private ArrayList<Row> deserialize() {
         // TODO
-        File file = new File(databaseName+File.separator+"table"+File.separator+tableName);
+        File file = new File(databaseName+File.separator+"data"+File.separator+tableName);
         if (!file.exists()) {
             return new ArrayList<>();
         }
