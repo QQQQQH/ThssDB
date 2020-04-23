@@ -1,5 +1,7 @@
 package cn.edu.thssdb.schema;
 
+import cn.edu.thssdb.exception.DuplicateKeyException;
+import cn.edu.thssdb.exception.KeyNotExistException;
 import cn.edu.thssdb.index.BPlusTree;
 import javafx.util.Pair;
 
@@ -29,53 +31,113 @@ public class Table implements Iterable<Row> {
         this.databaseName = databaseName;
         this.tableName = tableName;
         this.columns = new ArrayList<>(Arrays.asList(columns));
+
+        // assign to primaryIndex
+        this.primaryIndex = 0; // ????!!!!
+
+        recover();
     }
 
     private void recover() {
         // TODO
+        try {
+            lock.writeLock().lock();
+            ArrayList<Row> rows = deserialize();
+            for (Row row: rows) {
+                index.put(row.getEntries().get(primaryIndex), row);
+            }
+        }
+        finally {
+            lock.writeLock().unlock();
+        }
     }
 
     public void insert(Row row) {
         // TODO
-        Entry entry = row.getEntries().get(primaryIndex);
-        if (index.contains(entry))
-            throw new IllegalArgumentException("row already exists!");
-        index.put(entry, row);
+        try {
+            lock.writeLock().lock();
+            Entry entry = row.getEntries().get(primaryIndex);
+            if (index.contains(entry))
+                throw new DuplicateKeyException();
+            index.put(entry, row);
+        }
+        finally {
+            lock.writeLock().unlock();
+        }
     }
 
     public void delete(Row row) {
         // TODO
-        Entry entry = row.getEntries().get(primaryIndex);
-        if (!index.contains(entry))
-            throw new IllegalArgumentException("row not exists!");
-        index.remove(entry);
+        try {
+            lock.writeLock().lock();
+            Entry entry = row.getEntries().get(primaryIndex);
+            if (!index.contains(entry)) {
+                throw new KeyNotExistException();
+            }
+            index.remove(entry);
+        }
+        finally {
+            lock.writeLock().unlock();
+        }
     }
 
     public void update(Row row) {
         // TODO
-        Entry entry = row.getEntries().get(primaryIndex);
-        if (!index.contains(entry))
-            throw new IllegalArgumentException("row not exists!");
-        index.update(entry, row);
-    }
-
-    private void serialize() throws IOException {
-        // TODO
-        ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream("table"));
-        for (Row row : this) {
-            oos.writeObject(row);
+        try {
+            lock.writeLock().lock();
+            Entry entry = row.getEntries().get(primaryIndex);
+            if (!index.contains(entry))
+                throw new KeyNotExistException();
+            index.update(entry, row);
         }
-        oos.close();
+        finally {
+            lock.writeLock().unlock();
+        }
     }
 
-    private ArrayList<Row> deserialize() throws IOException, ClassNotFoundException {
+    private void serialize() {
         // TODO
-        File file = new File("table");
-        FileInputStream fis = new FileInputStream(file);
-        ObjectInputStream ois = new ObjectInputStream(fis);
-        ArrayList<Row> rows = new ArrayList<Row>();
-        while (fis.available() > 0) {
-            rows.add((Row) ois.readObject());
+        File dir = new File(databaseName+File.separator+"table");
+        if (!dir.exists() && !dir.mkdirs()) {
+            System.err.print("Fail to serialize due to mkdirs error!");
+            return;
+        }
+        try {
+            ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(dir.toString()+File.separator+tableName));
+            for (Row row : this) {
+                oos.writeObject(row);
+            }
+            oos.close();
+        }
+        catch (IOException e) {
+            e.printStackTrace();
+            System.err.print("Fail to serialize due to IOException!");
+        }
+    }
+
+    private ArrayList<Row> deserialize() {
+        // TODO
+        File file = new File(databaseName+File.separator+"table"+File.separator+tableName);
+        if (!file.exists()) {
+            return new ArrayList<>();
+        }
+        ArrayList<Row> rows = new ArrayList<>();
+        try {
+            FileInputStream fis = new FileInputStream(file);
+            ObjectInputStream ois = new ObjectInputStream(fis);
+            while (fis.available() > 0) {
+                rows.add((Row) ois.readObject());
+            }
+            ois.close();
+            fis.close();
+        }
+        catch (IOException e) {
+            e.printStackTrace();
+            System.err.println("Fail to deserialize due to IOException!");
+        }
+        catch (ClassNotFoundException e) {
+            e.printStackTrace();
+            System.err.println("Fail to deserialize due to ClassNotFoundException!");
         }
         return rows;
     }
