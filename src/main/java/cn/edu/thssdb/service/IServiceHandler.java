@@ -1,5 +1,10 @@
 package cn.edu.thssdb.service;
 
+import cn.edu.thssdb.rpc.thrift.ConnectReq;
+import cn.edu.thssdb.rpc.thrift.ConnectResp;
+import cn.edu.thssdb.rpc.thrift.DisconnetResp;
+import cn.edu.thssdb.rpc.thrift.ExecuteStatementReq;
+import cn.edu.thssdb.rpc.thrift.ExecuteStatementResp;
 import cn.edu.thssdb.rpc.thrift.GetTimeReq;
 import cn.edu.thssdb.rpc.thrift.GetTimeResp;
 import cn.edu.thssdb.rpc.thrift.IService;
@@ -17,5 +22,23 @@ public class IServiceHandler implements IService.Iface {
         resp.setTime(new Date().toString());
         resp.setStatus(new Status(Global.SUCCESS_CODE));
         return resp;
+    }
+
+    @Override
+    public ConnectResp connect(ConnectReq req) throws TException {
+        // TODO
+        return null;
+    }
+
+    @Override
+    public DisconnetResp disconnect(DisconnetResp req) throws TException {
+        // TODO
+        return null;
+    }
+
+    @Override
+    public ExecuteStatementResp executeStatement(ExecuteStatementReq req) throws TException {
+        // TODO
+        return null;
     }
 }
