@@ -28,7 +28,7 @@ public class Database {
         // TODO
         File dir = new File(name);
         if (!dir.exists() && !dir.mkdirs()) {
-            System.out.println("Fail to persist due to mkdirs error!");
+            System.err.println("Fail to persist due to mkdirs error!");
             return;
         }
         try {
@@ -41,7 +41,7 @@ public class Database {
                     oosSchema.writeObject(c.toString());
                 }
                 oosSchema.close();
-                // serialize data !!!
+                // serialize data in table!!!
             }
             oos.close();
         }
