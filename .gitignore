@@ -1,2 +1,3 @@
 /.idea/
 /target/test-classes
+*.DS_Store
