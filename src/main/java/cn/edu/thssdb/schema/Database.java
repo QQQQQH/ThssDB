@@ -120,7 +120,7 @@ public class Database {
                     String schemaStr = (String)oisSchema.readObject();
                     String[] schemaListStr = schemaStr.split(",");
                     columnsList.add(new Column(schemaListStr[0], // name
-                            ColumnType.valueOf(schemaListStr[1]),  // ColumnTyoe
+                            ColumnType.valueOf(schemaListStr[1]),  // ColumnType
                             Integer.parseInt(schemaListStr[2]),  // primary
                             schemaListStr[3].equals("true"), // notNull
                             Integer.parseInt(schemaListStr[2]))); // maxLength
