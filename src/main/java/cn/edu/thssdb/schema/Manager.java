@@ -23,17 +23,19 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 public class Manager {
     private HashMap<String, Database> databases;
     private String currentDatabase;
+    private static SQLExecutor sqlExecutor;
     private static ReentrantReadWriteLock lock;
 
     public static Manager getInstance() {
         return Manager.ManagerHolder.INSTANCE;
     }
 
-    public Manager() {
+    private Manager() {
         // TODO
         this.databases = new HashMap<>();
         this.currentDatabase = null;
         lock = new ReentrantReadWriteLock();
+        sqlExecutor = new SQLExecutor();
     }
 
     private void createDatabaseIfNotExists(String name) {
@@ -96,14 +98,7 @@ public class Manager {
     }
 
     public void execute(String sql) {
-        CharStream input = CharStreams.fromString(sql);
-        SQLLexer lexer = new SQLLexer(input);
-        CommonTokenStream tokens = new CommonTokenStream(lexer);
-        SQLParser parser = new SQLParser(tokens);
-        ParseTree tree = parser.parse();
-        MySQLVisitor visitor = new MySQLVisitor();
-        ArrayList<Statement> statementList =  (ArrayList<Statement>) visitor.visit(tree);
-        System.out.println(statementList.size());
+        sqlExecutor.parseAndExecute(sql);
     }
 
     private static class ManagerHolder {
@@ -111,6 +106,21 @@ public class Manager {
 
         private ManagerHolder() {
 
+        }
+    }
+
+    private static class SQLExecutor {
+        private SQLExecutor() {}
+
+        @SuppressWarnings("unchecked")
+        private void parseAndExecute(String sql) {
+            CharStream input = CharStreams.fromString(sql);
+            SQLLexer lexer = new SQLLexer(input);
+            CommonTokenStream tokens = new CommonTokenStream(lexer);
+            SQLParser parser = new SQLParser(tokens);
+            ParseTree tree = parser.parse();
+            MySQLVisitor visitor = new MySQLVisitor();
+            List<Statement> statementList =  (ArrayList<Statement>) visitor.visit(tree);
         }
     }
 }
