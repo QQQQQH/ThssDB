@@ -1,14 +1,7 @@
 package cn.edu.thssdb.service;
 
-import cn.edu.thssdb.rpc.thrift.ConnectReq;
-import cn.edu.thssdb.rpc.thrift.ConnectResp;
-import cn.edu.thssdb.rpc.thrift.DisconnetResp;
-import cn.edu.thssdb.rpc.thrift.ExecuteStatementReq;
-import cn.edu.thssdb.rpc.thrift.ExecuteStatementResp;
-import cn.edu.thssdb.rpc.thrift.GetTimeReq;
-import cn.edu.thssdb.rpc.thrift.GetTimeResp;
-import cn.edu.thssdb.rpc.thrift.IService;
-import cn.edu.thssdb.rpc.thrift.Status;
+import cn.edu.thssdb.rpc.thrift.*;
+import cn.edu.thssdb.server.ThssDB;
 import cn.edu.thssdb.utils.Global;
 import org.apache.thrift.TException;
 
@@ -27,18 +20,39 @@ public class IServiceHandler implements IService.Iface {
     @Override
     public ConnectResp connect(ConnectReq req) throws TException {
         // TODO
-        return null;
+        ConnectResp resp = new ConnectResp();
+        if (req.username.equals(Global.USERNAME) && req.password.equals(Global.PASSWORD)) {
+            resp.setSessionId(ThssDB.getInstance().setupSession());
+            resp.setStatus(new Status(Global.SUCCESS_CODE));
+        }
+        else {
+            resp.setStatus(new Status(Global.FAILURE_CODE));
+        }
+        return resp;
     }
 
     @Override
-    public DisconnetResp disconnect(DisconnetResp req) throws TException {
+    public DisconnetResp disconnect(DisconnetReq req) throws TException {
         // TODO
-        return null;
+        DisconnetResp resp = new DisconnetResp();
+        resp.setStatus(new Status(Global.SUCCESS_CODE));
+        ThssDB.getInstance().clearSession(req.getSessionId());
+        return resp;
     }
 
     @Override
     public ExecuteStatementResp executeStatement(ExecuteStatementReq req) throws TException {
         // TODO
-        return null;
+        ExecuteStatementResp resp = new ExecuteStatementResp();
+        if (ThssDB.getInstance().checkSession(req.getSessionId())) {
+            // exec
+            resp.setIsAbort(false);
+            resp.setHasResult(true);
+            resp.setStatus(new Status(Global.SUCCESS_CODE));
+        }
+        else {
+            resp.setStatus(new Status(Global.FAILURE_CODE));
+        }
+        return resp;
     }
 }
