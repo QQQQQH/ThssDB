@@ -26,16 +26,28 @@ public class Table implements Iterable<Row> {
     public BPlusTree<Entry, Row> index;
     private int primaryIndex;
 
-    public Table(String databaseName, String tableName, Column[] columns) {
+    public Table(String databaseName, String tableName, ArrayList<Column> columns) {
         // TODO
         this.databaseName = databaseName;
         this.tableName = tableName;
-        this.columns = new ArrayList<>(Arrays.asList(columns));
+        this.columns = columns;
 
         // assign to primaryIndex
-        this.primaryIndex = 0; // ????!!!!
-
-        recover();
+        int size = this.columns.size();
+        boolean primaryExist = false;
+        for (int i = 0;i < size;i++) {
+            if (this.columns.get(i).isPrimary()) {
+                primaryExist = true;
+                this.primaryIndex = i;
+                break;
+            }
+        }
+        if (!primaryExist) {
+            this.columns.get(0).setPrimary();
+            this.primaryIndex = 0;
+        }
+        System.out.println("primaryIndex: "+primaryIndex);
+//        recover();
     }
 
     private void recover() {

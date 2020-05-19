@@ -74,6 +74,16 @@ public class MySQLVisitor extends SQLBaseVisitor<Object> {
         return new DropDatabaseStatement(databaseName);
     }
 
+    /*
+        use_db_stmt :
+            K_USE database_name;
+     */
+    @Override
+    public Object visitUse_db_stmt(SQLParser.Use_db_stmtContext ctx) {
+        String databaseName = (String) visit(ctx.database_name());
+        return new UseDatabaseStatement(databaseName);
+    }
+
 
     /*
         create_table_stmt :
@@ -94,7 +104,6 @@ public class MySQLVisitor extends SQLBaseVisitor<Object> {
         }
         return new CreateTableStatement(tableName, columnDefList, primaryKey);
     }
-
 
     /*
         drop_table_stmt :

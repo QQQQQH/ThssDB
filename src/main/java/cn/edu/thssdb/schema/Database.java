@@ -1,10 +1,13 @@
 package cn.edu.thssdb.schema;
 
+import cn.edu.thssdb.exception.ColumnDoesNotExistException;
 import cn.edu.thssdb.exception.TableAlreadyExistException;
 import cn.edu.thssdb.exception.TableNotExistException;
+import cn.edu.thssdb.parser.Statement.ColumnDef;
 import cn.edu.thssdb.query.QueryResult;
 import cn.edu.thssdb.query.QueryTable;
 import cn.edu.thssdb.type.ColumnType;
+import cn.edu.thssdb.parser.Statement.ColumnType.Type;
 
 import java.io.*;
 import java.util.ArrayList;
@@ -54,14 +57,57 @@ public class Database {
         }
     }
 
-    public void create(String name, Column[] columns) {
-        // TODO
+//    public void create(String name, Column[] columns) {
+//        // TODO
+//        try {
+//            lock.writeLock().lock();
+//            if (tables.get(name) != null) {
+//                throw new TableAlreadyExistException();
+//            }
+//            Table table = new Table(this.name, name, columns);
+//            tables.put(name, table);
+//        }
+//        finally {
+//            lock.writeLock().unlock();
+//        }
+//    }
+
+    public void create(String name, ArrayList<ColumnDef> columnDefs, String primaryKey)
+            throws TableAlreadyExistException, ColumnDoesNotExistException {
         try {
             lock.writeLock().lock();
             if (tables.get(name) != null) {
                 throw new TableAlreadyExistException();
             }
-            Table table = new Table(this.name, name, columns);
+            ArrayList<Column> columnsList = new ArrayList<>();
+            for (ColumnDef columnDef: columnDefs) {
+                columnsList.add(new Column(columnDef.columnName,// name
+                        ColumnType.valueOf(columnDef.columnType.type.toString()), // ColumnType
+                        0, // primary
+                        columnDef.notNull, // notNull
+                        columnDef.columnType.num)); // maxLength
+            }
+            /*
+            * Set primary key.
+            * If primaryKey == null then set first column as primary key
+            * */
+            if (primaryKey == null) {
+                columnsList.get(0).setPrimary();
+            }
+            else {
+                boolean columnExist = false;
+                for (Column column : columnsList) {
+                    if (column.getName().equals(primaryKey)) {
+                        columnExist = true;
+                        column.setPrimary();
+                        break;
+                    }
+                }
+                if (!columnExist) {
+                    throw new ColumnDoesNotExistException();
+                }
+            }
+            Table table = new Table(this.name, name, columnsList);
             tables.put(name, table);
         }
         finally {
@@ -127,7 +173,7 @@ public class Database {
                 }
                 oisSchema.close();
                 fisSchema.close();
-                Table table = new Table(name, tableName, (Column[])columnsList.toArray());
+                Table table = new Table(name, tableName, columnsList);
                 tables.put(tableName, table);
             }
             ois.close();

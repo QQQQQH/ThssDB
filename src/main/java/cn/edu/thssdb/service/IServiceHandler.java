@@ -1,6 +1,8 @@
 package cn.edu.thssdb.service;
 
 import cn.edu.thssdb.rpc.thrift.*;
+import cn.edu.thssdb.schema.Manager;
+import cn.edu.thssdb.schema.Manager.SQLExecutor.SQLExecuteResult;
 import cn.edu.thssdb.server.ThssDB;
 import cn.edu.thssdb.utils.Global;
 import org.apache.thrift.TException;
@@ -47,13 +49,21 @@ public class IServiceHandler implements IService.Iface {
         ExecuteStatementResp resp = new ExecuteStatementResp();
         if (thssDB.checkSession(req.getSessionId())) {
             // exec
-            thssDB.execute(req.getStatement());
-            resp.setIsAbort(false);
-            resp.setHasResult(true);
-            resp.setStatus(new Status(Global.SUCCESS_CODE));
+            SQLExecuteResult result = thssDB.execute(req.getStatement());
+            resp.setMsg(result.getMessage());
+            resp.setStatus(new Status(result.isIsSucceed() ? Global.SUCCESS_CODE : Global.FAILURE_CODE));
+            resp.setIsAbort(result.isIsAbort());
+            resp.setHasResult(result.isHasResult());
+            if (result.isHasResult()) {
+                resp.setColumnsList(result.getColumnList());
+                resp.setRowList(result.getRowList());
+            }
         }
         else {
             resp.setStatus(new Status(Global.FAILURE_CODE));
+            resp.setIsAbort(false);
+            resp.setHasResult(false);
+            resp.setMsg("Invalid session ID!");
         }
         return resp;
     }

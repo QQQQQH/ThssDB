@@ -43,6 +43,7 @@ struct ExecuteStatementResp{
   // only for query
   4: optional list<string> columnsList
   5: optional list<list<string>> rowList
+  6: required string msg;
 }
 
 service IService {

@@ -4,6 +4,7 @@ public abstract class Statement {
     public enum Type {
         CREATE_DATABASE,
         DROP_DATABASE,
+        USE,
         CREATE_TABLE,
         DROP_TABLE,
         SHOW_META,

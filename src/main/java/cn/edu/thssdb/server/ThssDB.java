@@ -4,6 +4,7 @@ import cn.edu.thssdb.rpc.thrift.IService;
 import cn.edu.thssdb.schema.Manager;
 import cn.edu.thssdb.service.IServiceHandler;
 import cn.edu.thssdb.utils.Global;
+import cn.edu.thssdb.schema.Manager.SQLExecutor.SQLExecuteResult;
 import org.apache.thrift.server.TServer;
 import org.apache.thrift.server.TSimpleServer;
 import org.apache.thrift.transport.TServerSocket;
@@ -72,8 +73,9 @@ public class ThssDB {
         return sessionList.contains(sessionId);
     }
 
-    public void execute(String sql) {
-        manager.execute(sql);
+    public SQLExecuteResult execute(String sql) {
+        List<SQLExecuteResult> resultList =  manager.execute(sql);
+        return resultList.get(0);
     }
 
     private static class ThssDBHolder {

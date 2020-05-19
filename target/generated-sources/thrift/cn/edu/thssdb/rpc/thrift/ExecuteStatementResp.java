@@ -16,6 +16,7 @@ public class ExecuteStatementResp implements org.apache.thrift.TBase<ExecuteStat
   private static final org.apache.thrift.protocol.TField HAS_RESULT_FIELD_DESC = new org.apache.thrift.protocol.TField("hasResult", org.apache.thrift.protocol.TType.BOOL, (short)3);
   private static final org.apache.thrift.protocol.TField COLUMNS_LIST_FIELD_DESC = new org.apache.thrift.protocol.TField("columnsList", org.apache.thrift.protocol.TType.LIST, (short)4);
   private static final org.apache.thrift.protocol.TField ROW_LIST_FIELD_DESC = new org.apache.thrift.protocol.TField("rowList", org.apache.thrift.protocol.TType.LIST, (short)5);
+  private static final org.apache.thrift.protocol.TField MSG_FIELD_DESC = new org.apache.thrift.protocol.TField("msg", org.apache.thrift.protocol.TType.STRING, (short)6);
 
   private static final org.apache.thrift.scheme.SchemeFactory STANDARD_SCHEME_FACTORY = new ExecuteStatementRespStandardSchemeFactory();
   private static final org.apache.thrift.scheme.SchemeFactory TUPLE_SCHEME_FACTORY = new ExecuteStatementRespTupleSchemeFactory();
@@ -25,6 +26,7 @@ public class ExecuteStatementResp implements org.apache.thrift.TBase<ExecuteStat
   public boolean hasResult; // required
   public @org.apache.thrift.annotation.Nullable java.util.List<java.lang.String> columnsList; // optional
   public @org.apache.thrift.annotation.Nullable java.util.List<java.util.List<java.lang.String>> rowList; // optional
+  public @org.apache.thrift.annotation.Nullable java.lang.String msg; // required
 
   /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
   public enum _Fields implements org.apache.thrift.TFieldIdEnum {
@@ -32,7 +34,8 @@ public class ExecuteStatementResp implements org.apache.thrift.TBase<ExecuteStat
     IS_ABORT((short)2, "isAbort"),
     HAS_RESULT((short)3, "hasResult"),
     COLUMNS_LIST((short)4, "columnsList"),
-    ROW_LIST((short)5, "rowList");
+    ROW_LIST((short)5, "rowList"),
+    MSG((short)6, "msg");
 
     private static final java.util.Map<java.lang.String, _Fields> byName = new java.util.HashMap<java.lang.String, _Fields>();
 
@@ -58,6 +61,8 @@ public class ExecuteStatementResp implements org.apache.thrift.TBase<ExecuteStat
           return COLUMNS_LIST;
         case 5: // ROW_LIST
           return ROW_LIST;
+        case 6: // MSG
+          return MSG;
         default:
           return null;
       }
@@ -119,6 +124,8 @@ public class ExecuteStatementResp implements org.apache.thrift.TBase<ExecuteStat
         new org.apache.thrift.meta_data.ListMetaData(org.apache.thrift.protocol.TType.LIST, 
             new org.apache.thrift.meta_data.ListMetaData(org.apache.thrift.protocol.TType.LIST, 
                 new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING)))));
+    tmpMap.put(_Fields.MSG, new org.apache.thrift.meta_data.FieldMetaData("msg", org.apache.thrift.TFieldRequirementType.REQUIRED, 
+        new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING)));
     metaDataMap = java.util.Collections.unmodifiableMap(tmpMap);
     org.apache.thrift.meta_data.FieldMetaData.addStructMetaDataMap(ExecuteStatementResp.class, metaDataMap);
   }
@@ -129,7 +136,8 @@ public class ExecuteStatementResp implements org.apache.thrift.TBase<ExecuteStat
   public ExecuteStatementResp(
     Status status,
     boolean isAbort,
-    boolean hasResult)
+    boolean hasResult,
+    java.lang.String msg)
   {
     this();
     this.status = status;
@@ -137,6 +145,7 @@ public class ExecuteStatementResp implements org.apache.thrift.TBase<ExecuteStat
     setIsAbortIsSet(true);
     this.hasResult = hasResult;
     setHasResultIsSet(true);
+    this.msg = msg;
   }
 
   /**
@@ -161,6 +170,9 @@ public class ExecuteStatementResp implements org.apache.thrift.TBase<ExecuteStat
       }
       this.rowList = __this__rowList;
     }
+    if (other.isSetMsg()) {
+      this.msg = other.msg;
+    }
   }
 
   public ExecuteStatementResp deepCopy() {
@@ -176,6 +188,7 @@ public class ExecuteStatementResp implements org.apache.thrift.TBase<ExecuteStat
     this.hasResult = false;
     this.columnsList = null;
     this.rowList = null;
+    this.msg = null;
   }
 
   @org.apache.thrift.annotation.Nullable
@@ -331,6 +344,31 @@ public class ExecuteStatementResp implements org.apache.thrift.TBase<ExecuteStat
     }
   }
 
+  @org.apache.thrift.annotation.Nullable
+  public java.lang.String getMsg() {
+    return this.msg;
+  }
+
+  public ExecuteStatementResp setMsg(@org.apache.thrift.annotation.Nullable java.lang.String msg) {
+    this.msg = msg;
+    return this;
+  }
+
+  public void unsetMsg() {
+    this.msg = null;
+  }
+
+  /** Returns true if field msg is set (has been assigned a value) and false otherwise */
+  public boolean isSetMsg() {
+    return this.msg != null;
+  }
+
+  public void setMsgIsSet(boolean value) {
+    if (!value) {
+      this.msg = null;
+    }
+  }
+
   public void setFieldValue(_Fields field, @org.apache.thrift.annotation.Nullable java.lang.Object value) {
     switch (field) {
     case STATUS:
@@ -373,6 +411,14 @@ public class ExecuteStatementResp implements org.apache.thrift.TBase<ExecuteStat
       }
       break;
 
+    case MSG:
+      if (value == null) {
+        unsetMsg();
+      } else {
+        setMsg((java.lang.String)value);
+      }
+      break;
+
     }
   }
 
@@ -393,6 +439,9 @@ public class ExecuteStatementResp implements org.apache.thrift.TBase<ExecuteStat
 
     case ROW_LIST:
       return getRowList();
+
+    case MSG:
+      return getMsg();
 
     }
     throw new java.lang.IllegalStateException();
@@ -415,6 +464,8 @@ public class ExecuteStatementResp implements org.apache.thrift.TBase<ExecuteStat
       return isSetColumnsList();
     case ROW_LIST:
       return isSetRowList();
+    case MSG:
+      return isSetMsg();
     }
     throw new java.lang.IllegalStateException();
   }
@@ -479,6 +530,15 @@ public class ExecuteStatementResp implements org.apache.thrift.TBase<ExecuteStat
         return false;
     }
 
+    boolean this_present_msg = true && this.isSetMsg();
+    boolean that_present_msg = true && that.isSetMsg();
+    if (this_present_msg || that_present_msg) {
+      if (!(this_present_msg && that_present_msg))
+        return false;
+      if (!this.msg.equals(that.msg))
+        return false;
+    }
+
     return true;
   }
 
@@ -501,6 +561,10 @@ public class ExecuteStatementResp implements org.apache.thrift.TBase<ExecuteStat
     hashCode = hashCode * 8191 + ((isSetRowList()) ? 131071 : 524287);
     if (isSetRowList())
       hashCode = hashCode * 8191 + rowList.hashCode();
+
+    hashCode = hashCode * 8191 + ((isSetMsg()) ? 131071 : 524287);
+    if (isSetMsg())
+      hashCode = hashCode * 8191 + msg.hashCode();
 
     return hashCode;
   }
@@ -563,6 +627,16 @@ public class ExecuteStatementResp implements org.apache.thrift.TBase<ExecuteStat
         return lastComparison;
       }
     }
+    lastComparison = java.lang.Boolean.valueOf(isSetMsg()).compareTo(other.isSetMsg());
+    if (lastComparison != 0) {
+      return lastComparison;
+    }
+    if (isSetMsg()) {
+      lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.msg, other.msg);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+    }
     return 0;
   }
 
@@ -619,6 +693,14 @@ public class ExecuteStatementResp implements org.apache.thrift.TBase<ExecuteStat
       }
       first = false;
     }
+    if (!first) sb.append(", ");
+    sb.append("msg:");
+    if (this.msg == null) {
+      sb.append("null");
+    } else {
+      sb.append(this.msg);
+    }
+    first = false;
     sb.append(")");
     return sb.toString();
   }
@@ -630,6 +712,9 @@ public class ExecuteStatementResp implements org.apache.thrift.TBase<ExecuteStat
     }
     // alas, we cannot check 'isAbort' because it's a primitive and you chose the non-beans generator.
     // alas, we cannot check 'hasResult' because it's a primitive and you chose the non-beans generator.
+    if (msg == null) {
+      throw new org.apache.thrift.protocol.TProtocolException("Required field 'msg' was not present! Struct: " + toString());
+    }
     // check for sub-struct validity
     if (status != null) {
       status.validate();
@@ -743,6 +828,14 @@ public class ExecuteStatementResp implements org.apache.thrift.TBase<ExecuteStat
               org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
             }
             break;
+          case 6: // MSG
+            if (schemeField.type == org.apache.thrift.protocol.TType.STRING) {
+              struct.msg = iprot.readString();
+              struct.setMsgIsSet(true);
+            } else { 
+              org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
+            }
+            break;
           default:
             org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
         }
@@ -810,6 +903,11 @@ public class ExecuteStatementResp implements org.apache.thrift.TBase<ExecuteStat
           oprot.writeFieldEnd();
         }
       }
+      if (struct.msg != null) {
+        oprot.writeFieldBegin(MSG_FIELD_DESC);
+        oprot.writeString(struct.msg);
+        oprot.writeFieldEnd();
+      }
       oprot.writeFieldStop();
       oprot.writeStructEnd();
     }
@@ -830,6 +928,7 @@ public class ExecuteStatementResp implements org.apache.thrift.TBase<ExecuteStat
       struct.status.write(oprot);
       oprot.writeBool(struct.isAbort);
       oprot.writeBool(struct.hasResult);
+      oprot.writeString(struct.msg);
       java.util.BitSet optionals = new java.util.BitSet();
       if (struct.isSetColumnsList()) {
         optionals.set(0);
@@ -874,6 +973,8 @@ public class ExecuteStatementResp implements org.apache.thrift.TBase<ExecuteStat
       struct.setIsAbortIsSet(true);
       struct.hasResult = iprot.readBool();
       struct.setHasResultIsSet(true);
+      struct.msg = iprot.readString();
+      struct.setMsgIsSet(true);
       java.util.BitSet incoming = iprot.readBitSet(2);
       if (incoming.get(0)) {
         {

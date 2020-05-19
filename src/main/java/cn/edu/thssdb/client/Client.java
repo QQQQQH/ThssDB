@@ -156,21 +156,11 @@ public class Client {
         ExecuteStatementReq req = new ExecuteStatementReq(sessionId, cmd);
         try {
             ExecuteStatementResp resp = client.executeStatement(req);
-            if (resp.getStatus().getCode() == Global.SUCCESS_CODE) {
-                if (resp.isHasResult()) {
-                    println("Has results.");
-                    // show results
-                }
-                else {
-                    println("Execution succeeds.");
-                }
+            if (resp.isHasResult()) {
+                // show result
+                println("Result will be showed here.");
             }
-            else if (resp.isIsAbort()) {
-                println("Execution has been aborted!");
-            }
-            else {
-                println("Execution fails! Check your connection and statement.");
-            }
+            println(resp.getMsg());
         } catch (TException e) {
             logger.error(e.getMessage());
         }
