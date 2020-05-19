@@ -2,13 +2,22 @@ package cn.edu.thssdb.schema;
 
 import cn.edu.thssdb.exception.DatabaseAlreadyExistException;
 import cn.edu.thssdb.exception.DatabaseNotExistException;
+import cn.edu.thssdb.parser.*;
 import cn.edu.thssdb.server.ThssDB;
+
+import org.antlr.v4.runtime.CharStream;
+import org.antlr.v4.runtime.CharStreams;
+import org.antlr.v4.runtime.CommonTokenStream;
+import org.antlr.v4.runtime.tree.ParseTree;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 public class Manager {
@@ -84,6 +93,17 @@ public class Manager {
         } finally {
             lock.writeLock().unlock();
         }
+    }
+
+    public void execute(String sql) {
+        CharStream input = CharStreams.fromString(sql);
+        SQLLexer lexer = new SQLLexer(input);
+        CommonTokenStream tokens = new CommonTokenStream(lexer);
+        SQLParser parser = new SQLParser(tokens);
+        ParseTree tree = parser.parse();
+        MySQLVisitor visitor = new MySQLVisitor();
+        ArrayList<Statement> statementList =  (ArrayList<Statement>) visitor.visit(tree);
+        System.out.println(statementList.size());
     }
 
     private static class ManagerHolder {

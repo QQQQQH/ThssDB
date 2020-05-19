@@ -43,9 +43,11 @@ public class IServiceHandler implements IService.Iface {
     @Override
     public ExecuteStatementResp executeStatement(ExecuteStatementReq req) throws TException {
         // TODO
+        ThssDB thssDB = ThssDB.getInstance();
         ExecuteStatementResp resp = new ExecuteStatementResp();
-        if (ThssDB.getInstance().checkSession(req.getSessionId())) {
+        if (thssDB.checkSession(req.getSessionId())) {
             // exec
+            thssDB.execute(req.getStatement());
             resp.setIsAbort(false);
             resp.setHasResult(true);
             resp.setStatus(new Status(Global.SUCCESS_CODE));

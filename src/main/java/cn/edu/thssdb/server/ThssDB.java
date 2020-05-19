@@ -23,7 +23,7 @@ public class ThssDB {
     private static TServerSocket transport;
     private static TServer server;
 
-    private Manager manager;
+    private static Manager manager;
 
     private static long sessionCnt;
     private static List<Long> sessionList;
@@ -35,6 +35,7 @@ public class ThssDB {
     public static void main(String[] args) {
         sessionCnt = 0;
         sessionList = new ArrayList<>();
+        manager = Manager.getInstance();
         ThssDB server = ThssDB.getInstance();
         server.start();
     }
@@ -69,6 +70,10 @@ public class ThssDB {
 
     public boolean checkSession(long sessionId) {
         return sessionList.contains(sessionId);
+    }
+
+    public void execute(String sql) {
+        manager.execute(sql);
     }
 
     private static class ThssDBHolder {
