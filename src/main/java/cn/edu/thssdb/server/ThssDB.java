@@ -11,6 +11,9 @@ import org.apache.thrift.transport.TTransportException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class ThssDB {
 
     private static final Logger logger = LoggerFactory.getLogger(ThssDB.class);
@@ -22,11 +25,16 @@ public class ThssDB {
 
     private Manager manager;
 
+    private static long sessionCnt;
+    private static List<Long> sessionList;
+
     public static ThssDB getInstance() {
         return ThssDBHolder.INSTANCE;
     }
 
     public static void main(String[] args) {
+        sessionCnt = 0;
+        sessionList = new ArrayList<>();
         ThssDB server = ThssDB.getInstance();
         server.start();
     }
@@ -47,6 +55,20 @@ public class ThssDB {
         } catch (TTransportException e) {
             logger.error(e.getMessage());
         }
+    }
+
+    public long setupSession() {
+        long sessionId = sessionCnt++;
+        sessionList.add(sessionId);
+        return sessionId;
+    }
+
+    public void clearSession(long sessionId) {
+        sessionList.remove(sessionId);
+    }
+
+    public boolean checkSession(long sessionId) {
+        return sessionList.contains(sessionId);
     }
 
     private static class ThssDBHolder {

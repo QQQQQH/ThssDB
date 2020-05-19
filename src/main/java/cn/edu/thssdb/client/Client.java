@@ -1,7 +1,6 @@
 package cn.edu.thssdb.client;
 
-import cn.edu.thssdb.rpc.thrift.GetTimeReq;
-import cn.edu.thssdb.rpc.thrift.IService;
+import cn.edu.thssdb.rpc.thrift.*;
 import cn.edu.thssdb.utils.Global;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
@@ -42,7 +41,11 @@ public class Client {
     private static IService.Client client;
     private static CommandLine commandLine;
 
+    private static long sessionId;
+
     public static void main(String[] args) {
+        sessionId = -1;
+
         commandLine = parseCmd(args);
         if (commandLine.hasOption(HELP_ARGS)) {
             showHelp();
@@ -68,8 +71,17 @@ public class Client {
                     case Global.QUIT:
                         open = false;
                         break;
+
+                    case Global.CONNECT:
+                        connect();
+                        break;
+                    case Global.DISCONNECT:
+                        disconnect();
+                        break;
+
                     default:
-                        println("Invalid statements!");
+//                        println("Invalid statements!");
+                        execute(msg);
                         break;
                 }
                 long endTime = System.currentTimeMillis();
@@ -88,6 +100,77 @@ public class Client {
         GetTimeReq req = new GetTimeReq();
         try {
             println(client.getTime(req).getTime());
+        } catch (TException e) {
+            logger.error(e.getMessage());
+        }
+    }
+
+    private static void connect() {
+        if (sessionId != -1) {
+            println("Client is already connected!");
+            return;
+        }
+        ConnectReq req = new ConnectReq(Global.USERNAME, Global.PASSWORD);
+        try {
+            ConnectResp resp = client.connect(req);
+            if (resp.getStatus().getCode() == Global.SUCCESS_CODE) {
+                sessionId = resp.getSessionId();
+                println("Connection succeeds. Session ID is "+sessionId);
+            }
+            else {
+                println("Connection fails!");
+            }
+        } catch (TException e) {
+            logger.error(e.getMessage());
+        }
+    }
+
+    private static void disconnect() {
+        if (sessionId == -1) {
+            println("Client is not connected!");
+            return;
+        }
+        DisconnetReq req = new DisconnetReq();
+        req.setSessionId(sessionId);
+        try {
+            DisconnetResp resp = client.disconnect(req);
+            if (resp.getStatus().getCode() == Global.SUCCESS_CODE) {
+                println("Disconnect succeed.");
+            }
+            else {
+                println("Error occurs when disconnecting!");
+            }
+        } catch (TException e) {
+            logger.error(e.getMessage());
+        }
+        finally {
+            sessionId = -1;
+        }
+    }
+
+    private static void execute(String cmd) {
+        if (sessionId == -1) {
+            println("Client is not connected!");
+            return;
+        }
+        ExecuteStatementReq req = new ExecuteStatementReq(sessionId, cmd);
+        try {
+            ExecuteStatementResp resp = client.executeStatement(req);
+            if (resp.getStatus().getCode() == Global.SUCCESS_CODE) {
+                if (resp.isHasResult()) {
+                    println("Has results.");
+                    // show results
+                }
+                else {
+                    println("Execution succeeds.");
+                }
+            }
+            else if (resp.isIsAbort()) {
+                println("Execution has been aborted!");
+            }
+            else {
+                println("Execution fails! Check your connection and statement.");
+            }
         } catch (TException e) {
             logger.error(e.getMessage());
         }
