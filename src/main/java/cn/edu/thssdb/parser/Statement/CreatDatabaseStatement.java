@@ -1,4 +1,4 @@
-package cn.edu.thssdb.parser;
+package cn.edu.thssdb.parser.Statement;
 
 public class CreatDatabaseStatement extends Statement {
     public String databaseName;
