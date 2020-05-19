@@ -1,4 +1,4 @@
-package cn.edu.thssdb.parser;
+package cn.edu.thssdb.parser.Statement;
 
 public class ShowMetaStatement extends Statement {
     public String tableName;

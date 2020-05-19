@@ -1,9 +1,9 @@
-package cn.edu.thssdb.parser;
+package cn.edu.thssdb.parser.Statement;
 
 import java.util.ArrayList;
 
 public class SelectStatement extends Statement {
-    public ArrayList<String> resultColumnNameList;
+    public ArrayList<ColumnFullName> resultColumnNameList;
     public TableQuery tableQuery;
     public Condition condition;
 
@@ -12,7 +12,7 @@ public class SelectStatement extends Statement {
         return Type.SELECT;
     }
 
-    public SelectStatement(ArrayList<String> resultColumnNameList, TableQuery tableQuery, Condition condition) {
+    public SelectStatement(ArrayList<ColumnFullName> resultColumnNameList, TableQuery tableQuery, Condition condition) {
         this.resultColumnNameList = resultColumnNameList;
         this.tableQuery = tableQuery;
         this.condition = condition;

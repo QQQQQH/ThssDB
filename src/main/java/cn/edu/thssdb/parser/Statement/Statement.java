@@ -1,4 +1,4 @@
-package cn.edu.thssdb.parser;
+package cn.edu.thssdb.parser.Statement;
 
 public abstract class Statement {
     public enum Type {
