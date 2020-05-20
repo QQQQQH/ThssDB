@@ -57,65 +57,26 @@ public class Database {
         }
     }
 
-//    public void create(String name, Column[] columns) {
-//        // TODO
-//        try {
-//            lock.writeLock().lock();
-//            if (tables.get(name) != null) {
-//                throw new TableAlreadyExistException();
-//            }
-//            Table table = new Table(this.name, name, columns);
-//            tables.put(name, table);
-//        }
-//        finally {
-//            lock.writeLock().unlock();
-//        }
-//    }
+    public boolean checkTableExist(String tableName) {
+        return tables.get(tableName) != null;
+    }
 
-    public void create(String name, ArrayList<ColumnDef> columnDefs, String primaryKey)
-            throws TableAlreadyExistException, ColumnDoesNotExistException {
+    public void create(String tableName, ArrayList<Column> columns)
+            throws TableAlreadyExistException {
         try {
             lock.writeLock().lock();
-            if (tables.get(name) != null) {
+            if (checkTableExist(tableName)) {
                 throw new TableAlreadyExistException();
             }
-            ArrayList<Column> columnsList = new ArrayList<>();
-            for (ColumnDef columnDef: columnDefs) {
-                columnsList.add(new Column(columnDef.columnName,// name
-                        ColumnType.valueOf(columnDef.columnType.type.toString()), // ColumnType
-                        0, // primary
-                        columnDef.notNull, // notNull
-                        columnDef.columnType.num)); // maxLength
-            }
-            /*
-            * Set primary key.
-            * If primaryKey == null then set first column as primary key
-            * */
-            if (primaryKey == null) {
-                columnsList.get(0).setPrimary();
-            }
-            else {
-                boolean columnExist = false;
-                for (Column column : columnsList) {
-                    if (column.getName().equals(primaryKey)) {
-                        columnExist = true;
-                        column.setPrimary();
-                        break;
-                    }
-                }
-                if (!columnExist) {
-                    throw new ColumnDoesNotExistException();
-                }
-            }
-            Table table = new Table(this.name, name, columnsList);
-            tables.put(name, table);
+            Table table = new Table(this.name, tableName, columns);
+            tables.put(tableName, table);
         }
         finally {
             lock.writeLock().unlock();
         }
     }
 
-    public void drop(String tableName) {
+    public void drop(String tableName) throws TableNotExistException {
         // TODO
         try {
             lock.writeLock().lock();
@@ -138,10 +99,18 @@ public class Database {
         }
     }
 
-    public String select(QueryTable[] queryTables) {
-        // TODO
-        QueryResult queryResult = new QueryResult(queryTables);
-        return null;
+    public Table getTable(String tableName) throws TableNotExistException {
+        try {
+            lock.writeLock().lock();
+            Table table = tables.get(tableName);
+            if (table == null) {
+                throw new TableNotExistException();
+            }
+            return table;
+        }
+        finally {
+            lock.writeLock().unlock();
+        }
     }
 
     private void recover() {

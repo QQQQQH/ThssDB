@@ -17,6 +17,20 @@ class MetaInfo {
 
     int columnFind(String name) {
         // TODO
-        return 0;
+        int index = -1;
+        int leftSize = columns.size();
+        for (int i = 0;i < leftSize;i++) {
+            if (columns.get(i).getName().equals(name)) {
+                index = i;
+                break;
+            }
+        }
+        return index;
     }
+
+    int getColumnSize() { return columns.size(); }
+
+    String getColumnName(int index) { return columns.get(index).getName(); }
+
+    String getTableName() { return tableName; }
 }

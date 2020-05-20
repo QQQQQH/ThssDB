@@ -1,8 +1,10 @@
 package cn.edu.thssdb.schema;
 
-import cn.edu.thssdb.exception.DuplicateKeyException;
-import cn.edu.thssdb.exception.KeyNotExistException;
+import cn.edu.thssdb.exception.*;
 import cn.edu.thssdb.index.BPlusTree;
+import cn.edu.thssdb.parser.Statement.Condition;
+import cn.edu.thssdb.parser.Statement.Expression;
+import cn.edu.thssdb.type.ColumnType;
 import javafx.util.Pair;
 
 import java.io.File;
@@ -13,6 +15,7 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 
+import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
@@ -24,7 +27,7 @@ public class Table implements Iterable<Row> {
     public String tableName;
     public ArrayList<Column> columns;
     public BPlusTree<Entry, Row> index;
-    private int primaryIndex;
+    public int primaryIndex;
 
     public Table(String databaseName, String tableName, ArrayList<Column> columns) {
         // TODO
@@ -46,8 +49,8 @@ public class Table implements Iterable<Row> {
             this.columns.get(0).setPrimary();
             this.primaryIndex = 0;
         }
-        System.out.println("primaryIndex: "+primaryIndex);
-//        recover();
+        this.index = new BPlusTree<>();
+        this.lock = new ReentrantReadWriteLock();
     }
 
     private void recover() {
@@ -64,14 +67,15 @@ public class Table implements Iterable<Row> {
         }
     }
 
-    public void insert(Row row) {
+    public void insert(Row row) throws DuplicateKeyException {
         // TODO
         try {
             lock.writeLock().lock();
-            Entry entry = row.getEntries().get(primaryIndex);
-            if (index.contains(entry))
+            Entry primary = row.getEntries().get(primaryIndex);
+            if (index.contains(primary)) {
                 throw new DuplicateKeyException();
-            index.put(entry, row);
+            }
+            index.put(primary, row);
         }
         finally {
             lock.writeLock().unlock();
@@ -87,6 +91,17 @@ public class Table implements Iterable<Row> {
                 throw new KeyNotExistException();
             }
             index.remove(entry);
+        }
+        finally {
+            lock.writeLock().unlock();
+        }
+    }
+
+    public void delete(Condition cond) {
+        // TODO
+        try {
+            lock.writeLock().lock();
+
         }
         finally {
             lock.writeLock().unlock();

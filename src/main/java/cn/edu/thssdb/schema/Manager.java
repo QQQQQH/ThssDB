@@ -3,21 +3,19 @@ package cn.edu.thssdb.schema;
 import cn.edu.thssdb.exception.*;
 import cn.edu.thssdb.parser.*;
 import cn.edu.thssdb.parser.Statement.*;
-import cn.edu.thssdb.server.ThssDB;
+import cn.edu.thssdb.query.QueryResult;
 
+import cn.edu.thssdb.type.ColumnType;
 import org.antlr.v4.runtime.CharStream;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.tree.ParseTree;
 
-import javax.xml.crypto.Data;
-import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
-import java.lang.reflect.Array;
 import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -211,8 +209,19 @@ public class Manager {
                     case CREATE_TABLE:
                         resultList.add(createTable((CreateTableStatement)statement));
                         break;
+                    case DROP_TABLE:
+                        resultList.add(dropTable((DropTableStatement)statement));
+                        break;
+                    case INSERT:
+                        resultList.add(insert((InsertStatement)statement));
+                        break;
+                    case SELECT:
+                        resultList.add(select((SelectStatement)statement));
+                        break;
+//                    case DELETE:
+//                        resultList.add(delete((DeleteStatement)statement));
                     default:
-                        resultList.add(new SQLExecuteResult("SQL syntax supported!", false, false));
+                        resultList.add(new SQLExecuteResult("Error: SQL syntax not supported!", false, false));
                         break;
                 }
             }
@@ -224,8 +233,8 @@ public class Manager {
                 Manager.getInstance().createDatabaseIfNotExists(statement.databaseName);
                 return new SQLExecuteResult("Create database succeeds.", true, false);
             }
-            catch (DatabaseAlreadyExistException e) {
-                return new SQLExecuteResult("Database already exists!", false, false);
+            catch (Exception e) {
+                return new SQLExecuteResult(e.getMessage(), false, false);
             }
         }
 
@@ -234,8 +243,8 @@ public class Manager {
                 Manager.getInstance().deleteDatabase(statement.databaseName);
                 return new SQLExecuteResult("Drop database succeeds.", true, false);
             }
-            catch (DatabaseNotExistException e) {
-                return new SQLExecuteResult("Database doesn't exist!", false, false);
+            catch (Exception e) {
+                return new SQLExecuteResult(e.getMessage(), false, false);
             }
         }
 
@@ -244,27 +253,330 @@ public class Manager {
                 Manager.getInstance().switchDatabase(statement.databaseName);
                 return new SQLExecuteResult("Database switch to "+statement.databaseName+".", true, false);
             }
-            catch(DatabaseNotExistException e) {
-                return new SQLExecuteResult("Database doesn't exist!", false, false);
+            catch (Exception e) {
+                return new SQLExecuteResult(e.getMessage(), false, false);
             }
         }
 
         private SQLExecuteResult createTable(CreateTableStatement statement) {
             try {
                 Database database = Manager.getInstance().getDatabase();
-                database.create(statement.tableName, statement.columnDefList, statement.primaryKey);
+                if (database.checkTableExist(statement.tableName)) {
+                    throw new TableAlreadyExistException();
+                }
+                ArrayList<Column> columnsList = new ArrayList<>();
+                for (ColumnDef columnDef: statement.columnDefList) {
+                    columnsList.add(new Column(columnDef.columnName, // name
+                            ColumnType.valueOf(columnDef.columnType.type.toString()), // ColumnType
+                            0, // primary
+                            columnDef.notNull, // notNull
+                            columnDef.columnType.num)); // maxLength
+                }
+                /*
+                 * Set primary key.
+                 * If primaryKey == null then set first column as primary key
+                 * */
+                if (statement.primaryKey == null) {
+                    columnsList.get(0).setPrimary();
+                }
+                else {
+                    boolean columnExist = false;
+                    for (Column column : columnsList) {
+                        if (column.getName().equals(statement.primaryKey)) {
+                            columnExist = true;
+                            column.setPrimary();
+                            break;
+                        }
+                    }
+                    if (!columnExist) {
+                        throw new ColumnDoesNotExistException();
+                    }
+                }
+                database.create(statement.tableName, columnsList);
                 return new SQLExecuteResult("Create table succeeds.", true, false);
             }
-            catch (DatabaseNotSelectException e) {
-                return new SQLExecuteResult("Database hasn't been selected!", false, false);
-            }
-            catch (ColumnDoesNotExistException e) {
-                return new SQLExecuteResult("Primary key doesn't exist in columns!", false, false);
-            }
-            catch (TableAlreadyExistException e) {
-                return new SQLExecuteResult("Table already exists!", false, false);
+            catch (Exception e) {
+                return new SQLExecuteResult(e.getMessage(), false, false);
             }
         }
 
+        private SQLExecuteResult dropTable(DropTableStatement statement) {
+            try {
+                Database database = Manager.getInstance().getDatabase();
+                database.drop(statement.tableName);
+                return new SQLExecuteResult("Drop table succeeds.", true, false);
+            }
+            catch (Exception e) {
+                return new SQLExecuteResult(e.getMessage(), false, false);
+            }
+        }
+
+        private SQLExecuteResult insert(InsertStatement statement) {
+            try {
+                Database database = Manager.getInstance().getDatabase();
+                Table table = database.getTable(statement.tableName);
+                if (statement.columnNameList.size()
+                        != statement.valueList.size()) {
+                    throw new ColumnValueSizeNotMatchedException();
+                }
+                ArrayList<Entry> entryList = new ArrayList<>();
+                boolean[] covers = new boolean[statement.columnNameList.size()];
+                Arrays.fill(covers, false);
+                for (Column column: table.columns) {
+                    int size = statement.columnNameList.size();
+                    boolean assignExist = false;
+                    for (int i = 0;i < size;i++) {
+                        String columnName = statement.columnNameList.get(i);
+                        Comparable value = statement.valueList.get(i);
+                        if (column.getName().equals(columnName)) {
+                            if (covers[i]) {
+                                throw new DuplicateAssignException();
+                            }
+                            else if (ColumnType.typeCheck(column.getType(), value)) {
+                                assignExist = true;
+                                entryList.add(new Entry(value));
+                                covers[i] = true;
+                                break;
+                            }
+                            else {
+                                throw new ColumnTypeNotMatchedException();
+                            }
+                        }
+                    }
+                    if (!assignExist) {
+                        if (column.isNotNull() || column.isPrimary()) {
+                            throw new EmptyKeyException();
+                        }
+                        else {
+                            entryList.add(new Entry(null));
+                        }
+                    }
+                }
+                for (boolean cover: covers) {
+                    if (!cover) {
+                        throw new ColumnDoesNotExistException();
+                    }
+                }
+                table.insert(new Row(entryList));
+                return new SQLExecuteResult("Insert operation succeeds.", true, false);
+            }
+            catch (Exception e) {
+                return new SQLExecuteResult(e.getMessage(), false, false);
+            }
+        }
+
+//        private SQLExecuteResult delete(DeleteStatement statement) {
+//            try {
+//                Database database = Manager.getInstance().getDatabase();
+//                Table table = database.getTable(statement.tableName);
+//                if (statement.condition == null) {
+//                    throw new EmptyConditionException();
+//                }
+//                Expression left = statement.condition.expressionLeft;
+//                Expression right = statement.condition.expressionRight;
+//                String op = statement.condition.op;
+//                return new SQLExecuteResult("Insert operation succeeds.", true, false);
+//            }
+//            catch (Exception e) {
+//                return new SQLExecuteResult(e.getMessage(), false, false);
+//            }
+//
+//        }
+
+        private SQLExecuteResult select(SelectStatement statement) {
+            try {
+                Database database = Manager.getInstance().getDatabase();
+                ArrayList<Table> tables2Query = new ArrayList<>();
+                tables2Query.add(database.getTable(statement.tableQuery.tableNameLeft));
+                if (statement.tableQuery.tableNameRight != null) {
+                    tables2Query.add(database.getTable(statement.tableQuery.tableNameRight));
+                }
+                QueryResult queryResult = new QueryResult(tables2Query);
+
+                queryResult.query(statement);
+                System.out.println(queryResult.getAttrList());
+                System.out.println(queryResult.getResultRowList());
+                return new SQLExecuteResult(
+                        "Query succeeds.",
+                        queryResult.getAttrList(),
+                        queryResult.getResultRowList()
+                );
+            }
+            catch (Exception e) {
+                return new SQLExecuteResult(e.getMessage(), false, false);
+            }
+        }
+
+//        private boolean calcCondition(Condition condition,
+//                                      String tableLeftName,
+//                                      String tableRightName,
+//                                      ArrayList<Column> columnListLeft,
+//                                      ArrayList<Column> columnListRight,
+//                                      Row row)
+//                throws InvalidOperandTypeException,
+//                DivideZeroException,
+//                InvalidOperatorException,
+//                InvalidStatementException,
+//                DuplicateMatchedException,
+//                TableNotExistException,
+//                ColumnDoesNotExistException,
+//                OperandTypeNotMatchedException
+//        {
+//            String op = condition.op;
+//            Comparable resultLeft = calcExpression(
+//                    condition.expressionLeft,
+//                    tableLeftName,
+//                    tableRightName,
+//                    columnListLeft,
+//                    columnListRight,
+//                    row);
+//            Comparable resultRight = calcExpression(
+//                    condition.expressionLeft,
+//                    tableLeftName,
+//                    tableRightName,
+//                    columnListLeft,
+//                    columnListRight,
+//                    row);
+//            if (!resultLeft.getClass().equals(resultRight.getClass())) {
+//                throw new OperandTypeNotMatchedException();
+//            }
+//            int compareResult = resultLeft.toString().compareTo(resultRight.toString())
+//            switch (op) {
+//                case "=": return compareResult == 0;
+//                case "<>": return compareResult != 0;
+//                case "<": return compareResult < 0;
+//                case ">": return compareResult > 0;
+//                case "<=": return compareResult <= 0;
+//                case ">=": return compareResult >= 0;
+//                default: return false;
+//            }
+//        }
+//
+//        private Comparable calcExpression(Expression expression,
+//                                          String tableLeftName,
+//                                          String tableRightName,
+//                                          ArrayList<Column> columnListLeft,
+//                                          ArrayList<Column> columnListRight,
+//                                          Row row)
+//                throws InvalidOperandTypeException,
+//                DivideZeroException,
+//                InvalidOperatorException,
+//                InvalidStatementException,
+//                DuplicateMatchedException,
+//                TableNotExistException,
+//                ColumnDoesNotExistException
+//        {
+//            Comparer comparerLeft = expression.comparerLeft;
+//            Comparer comparerRight = expression.comparerRight;
+//            Expression.OP op = expression.op;
+//            if (comparerLeft != null && comparerRight == null && op == null) {
+//                return getValueFromComparer(comparerLeft,
+//                        tableLeftName,
+//                        tableRightName,
+//                        columnListLeft,
+//                        columnListRight,
+//                        row);
+//            }
+//            else if (comparerLeft != null && comparerRight != null && op != null){
+//                Comparable comparableLeft = getValueFromComparer(
+//                        comparerLeft,
+//                        tableLeftName,
+//                        tableRightName,
+//                        columnListLeft,
+//                        columnListRight,
+//                        row
+//                );
+//                Comparable comparableRight = getValueFromComparer(
+//                        comparerRight,
+//                        tableLeftName,
+//                        tableRightName,
+//                        columnListLeft,
+//                        columnListRight,
+//                        row
+//                );
+//                if (comparableLeft instanceof String || comparableRight instanceof String) {
+//                    throw new InvalidOperandTypeException();
+//                }
+//                Double doubleLeft = (Double)comparableLeft;
+//                Double doubleRight = (Double)comparableRight;
+//                switch (op) {
+//                    case ADD: return doubleLeft + doubleRight;
+//                    case SUB: return doubleLeft - doubleRight;
+//                    case MUL: return doubleLeft * doubleRight;
+//                    case DIV: {
+//                        if (doubleRight == 0) {
+//                            throw new DivideZeroException();
+//                        }
+//                        return doubleLeft / doubleRight;
+//                    }
+//                    default: throw new InvalidOperatorException();
+//                }
+//            }
+//            else {
+//                throw new InvalidStatementException();
+//            }
+//
+//        }
+//
+//        private Comparable getValueFromComparer(Comparer comparer,
+//                                                String tableLeftName,
+//                                                String tableRightName,
+//                                                ArrayList<Column> columnListLeft,
+//                                                ArrayList<Column> columnListRight,
+//                                                Row row)
+//                throws DuplicateMatchedException,
+//                TableNotExistException,
+//                ColumnDoesNotExistException
+//        {
+//            if (comparer.get_type().equals(Comparer.Type.COLUMN_FULL_NAME)) {
+//                ColumnFullName fullNameLeft = (ColumnFullName)comparer;
+//                int index;
+//                if (fullNameLeft.tableName == null) {
+//                    index = getColumnIndex(columnListLeft, fullNameLeft.columnName);
+//                    if (columnListRight != null) {
+//                        int indexRight = getColumnIndex(columnListLeft, fullNameLeft.columnName);
+//                        if (index != -1 && indexRight != -1) {
+//                            throw new DuplicateMatchedException();
+//                        }
+//                        else if (index == -1 && indexRight != -1) {
+//                            index = indexRight + columnListLeft.size();
+//                        }
+//                    }
+//                }
+//                else {
+//                    if (fullNameLeft.tableName.equals(tableLeftName) && !fullNameLeft.tableName.equals(tableRightName)) {
+//                        index = getColumnIndex(columnListLeft, fullNameLeft.columnName);
+//                    }
+//                    else if (!fullNameLeft.tableName.equals(tableLeftName) && fullNameLeft.tableName.equals(tableRightName)) {
+//                        index = getColumnIndex(columnListRight, fullNameLeft.columnName);
+//                    }
+//                    else if (fullNameLeft.tableName.equals(tableLeftName) && fullNameLeft.tableName.equals(tableRightName)) {
+//                        throw new DuplicateMatchedException();
+//                    }
+//                    else {
+//                        throw new TableNotExistException();
+//                    }
+//                }
+//                if (index == -1) {
+//                    throw new ColumnDoesNotExistException();
+//                }
+//                return row.getEntries().get(index).value;
+//            }
+//            else {
+//                return ((LiteralValue)comparer).value;
+//            }
+//        }
+//
+//        private int getColumnIndex(ArrayList<Column> columnList, String columnName) {
+//            int index = -1;
+//            int leftSize = columnList.size();
+//            for (int i = 0;i < leftSize;i++) {
+//                if (columnList.get(i).getName().equals(columnName)) {
+//                    index = i;
+//                    break;
+//                }
+//            }
+//            return index;
+//        }
     }
 }

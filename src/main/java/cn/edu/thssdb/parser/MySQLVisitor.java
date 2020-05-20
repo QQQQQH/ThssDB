@@ -423,11 +423,16 @@ public class MySQLVisitor extends SQLBaseVisitor<Object> {
     @Override
     public Object visitTable_query(SQLParser.Table_queryContext ctx) {
         if (ctx.table_name(1) == null) {
-            return new TableQuery(ctx.table_name(0).getText());
+//            return new TableQuery(ctx.table_name(0).getText());
+            return new TableQuery((String)visit(ctx.table_name(0)));
         } else {
+//            return new TableQuery(
+//                    ctx.table_name(0).getText(),
+//                    ctx.table_name(1).getText(),
+//                    (Condition) visit(ctx.multiple_condition()));
             return new TableQuery(
-                    ctx.table_name(0).getText(),
-                    ctx.table_name(1).getText(),
+                    (String)visit(ctx.table_name(0)),
+                    (String)visit(ctx.table_name(1)),
                     (Condition) visit(ctx.multiple_condition()));
         }
     }

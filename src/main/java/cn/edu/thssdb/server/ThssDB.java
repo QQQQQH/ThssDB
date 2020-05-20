@@ -74,7 +74,7 @@ public class ThssDB {
     }
 
     public SQLExecuteResult execute(String sql) {
-        List<SQLExecuteResult> resultList =  manager.execute(sql);
+        List<SQLExecuteResult> resultList = manager.execute(sql);
         return resultList.get(0);
     }
 

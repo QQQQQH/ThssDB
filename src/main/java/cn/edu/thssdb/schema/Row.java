@@ -13,6 +13,8 @@ public class Row implements Serializable {
         this.entries = new ArrayList<>();
     }
 
+    public Row(ArrayList<Entry> entryList) { this.entries = entryList; }
+
     public Row(Entry[] entries) {
         this.entries = new ArrayList<>(Arrays.asList(entries));
     }

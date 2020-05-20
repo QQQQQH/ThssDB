@@ -28,6 +28,10 @@ public class Column implements Comparable<Column> {
 
     public boolean isPrimary() { return primary == 1; }
 
+    public boolean isNotNull() { return notNull; }
+
+    public ColumnType getType() { return type; }
+
     public String toString() {
         return name + ',' + type + ',' + primary + ',' + notNull + ',' + maxLength;
     }
