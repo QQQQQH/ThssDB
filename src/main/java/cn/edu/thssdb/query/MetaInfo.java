@@ -1,6 +1,7 @@
 package cn.edu.thssdb.query;
 
 import cn.edu.thssdb.schema.Column;
+import cn.edu.thssdb.type.ColumnType;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -31,6 +32,8 @@ class MetaInfo {
     int getColumnSize() { return columns.size(); }
 
     String getColumnName(int index) { return columns.get(index).getName(); }
+
+    ColumnType getColumnType(int index) { return columns.get(index).getType(); }
 
     String getTableName() { return tableName; }
 }

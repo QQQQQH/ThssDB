@@ -218,8 +218,12 @@ public class Manager {
                     case SELECT:
                         resultList.add(select((SelectStatement)statement));
                         break;
-//                    case DELETE:
-//                        resultList.add(delete((DeleteStatement)statement));
+                    case DELETE:
+                        resultList.add(delete((DeleteStatement)statement));
+                        break;
+                    case UPDATE:
+                        resultList.add(update((UpdateStatement)statement));
+                        break;
                     default:
                         resultList.add(new SQLExecuteResult("Error: SQL syntax not supported!", false, false));
                         break;
@@ -365,23 +369,37 @@ public class Manager {
             }
         }
 
-//        private SQLExecuteResult delete(DeleteStatement statement) {
-//            try {
-//                Database database = Manager.getInstance().getDatabase();
-//                Table table = database.getTable(statement.tableName);
-//                if (statement.condition == null) {
-//                    throw new EmptyConditionException();
-//                }
-//                Expression left = statement.condition.expressionLeft;
-//                Expression right = statement.condition.expressionRight;
-//                String op = statement.condition.op;
-//                return new SQLExecuteResult("Insert operation succeeds.", true, false);
-//            }
-//            catch (Exception e) {
-//                return new SQLExecuteResult(e.getMessage(), false, false);
-//            }
-//
-//        }
+        private SQLExecuteResult delete(DeleteStatement statement) {
+            try {
+                Database database = Manager.getInstance().getDatabase();
+                Table table = database.getTable(statement.tableName);
+                QueryResult queryResult = new QueryResult(table);
+                ArrayList<Row> row2Delete = queryResult.deleteQuery(statement);
+                for (Row row: row2Delete) {
+                    table.delete(row);
+                }
+                return new SQLExecuteResult("Delete operation succeeds.", true, false);
+            }
+            catch (Exception e) {
+                return new SQLExecuteResult(e.getMessage(), false, false);
+            }
+        }
+
+        private SQLExecuteResult update(UpdateStatement statement) {
+            try {
+                Database database = Manager.getInstance().getDatabase();
+                Table table = database.getTable(statement.tableName);
+                QueryResult queryResult = new QueryResult(table);
+                ArrayList<Row> row2Update = queryResult.updateQuery(statement);
+                for (Row row: row2Update) {
+                    table.update(row);
+                }
+                return new SQLExecuteResult("Update operation succeeds.", true, false);
+            }
+            catch (Exception e) {
+                return new SQLExecuteResult(e.getMessage(), false, false);
+            }
+        }
 
         private SQLExecuteResult select(SelectStatement statement) {
             try {
@@ -393,7 +411,7 @@ public class Manager {
                 }
                 QueryResult queryResult = new QueryResult(tables2Query);
 
-                queryResult.query(statement);
+                queryResult.selectQuery(statement);
                 System.out.println(queryResult.getAttrList());
                 System.out.println(queryResult.getResultRowList());
                 return new SQLExecuteResult(

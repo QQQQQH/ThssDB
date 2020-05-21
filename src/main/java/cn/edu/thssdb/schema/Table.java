@@ -97,17 +97,6 @@ public class Table implements Iterable<Row> {
         }
     }
 
-    public void delete(Condition cond) {
-        // TODO
-        try {
-            lock.writeLock().lock();
-
-        }
-        finally {
-            lock.writeLock().unlock();
-        }
-    }
-
     public void update(Row row) {
         // TODO
         try {

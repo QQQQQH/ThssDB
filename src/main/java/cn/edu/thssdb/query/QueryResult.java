@@ -11,6 +11,7 @@ import java.util.LinkedList;
 import java.util.List;
 
 import cn.edu.thssdb.schema.Table;
+import cn.edu.thssdb.type.ColumnType;
 import javafx.scene.control.Cell;
 
 public class QueryResult {
@@ -23,19 +24,43 @@ public class QueryResult {
 
     public QueryResult(ArrayList<Table> tables2Query) {
         // TODO
-        this.index = null;
-        this.attrs = null;
-        this.resultRowList = null;
-        this.queryTables = new ArrayList<>();
-        this.metaInfos = new ArrayList<>();
+        index = null;
+        attrs = null;
         resultRowList = null;
+        resultRowList = null;
+        queryTables = new ArrayList<>();
+        metaInfos = new ArrayList<>();
         for (Table table: tables2Query) {
             queryTables.add(new QueryTable(table));
             metaInfos.add(new MetaInfo(table.tableName, table.columns));
         }
     }
 
-    public void query(SelectStatement statement) {
+    public QueryResult(Table table) {
+        index = null;
+        attrs = null;
+        resultRowList = null;
+        resultRowList = null;
+        queryTables = new ArrayList<>();
+        metaInfos = new ArrayList<>();
+        queryTables.add(new QueryTable(table));
+        metaInfos.add(new MetaInfo(table.tableName, table.columns));
+    }
+
+    public ArrayList<Row> deleteQuery(DeleteStatement statement) {
+        ArrayList<Row> resultRowList_ = getRowListFromTables(null);
+        resultRowList_ = filterRowList(resultRowList_, statement.condition);
+        return resultRowList_;
+    }
+
+    public ArrayList<Row> updateQuery(UpdateStatement statement) {
+        ArrayList<Row> resultRowList_ = getRowListFromTables(null);
+        resultRowList_ = filterRowList(resultRowList_, statement.condition);
+        resultRowList_ = updateRowList(resultRowList_, metaInfos.get(0), statement.columnName, statement.expression);
+        return resultRowList_;
+    }
+
+    public void selectQuery(SelectStatement statement) {
         ArrayList<Row> resultRowList_ = getRowListFromTables(statement.tableQuery.condition);
         resultRowList_ = filterRowList(resultRowList_, statement.condition);
         resultRowList_ = selectColumns(
@@ -49,6 +74,7 @@ public class QueryResult {
     public List<List<String>> getResultRowList() {
         return resultRowList;
     }
+
     public List<String> getAttrList() {
         return attrs;
     }
@@ -159,6 +185,37 @@ public class QueryResult {
             }
         }
         return index;
+    }
+
+    private ArrayList<Row> updateRowList(ArrayList<Row> rowList, MetaInfo metaInfo, String columnName, Expression expression) {
+        int index = metaInfo.columnFind(columnName);
+        if (index == -1) {
+            throw new ColumnDoesNotExistException();
+        }
+        else {
+            for (Row row: rowList) {
+                Comparable newValue = calcExpression(expression, metaInfo, null, row);
+                ColumnType type = metaInfo.getColumnType(index);
+                boolean columnIsString = type.equals(ColumnType.STRING);
+                boolean newValueIsString = newValue instanceof String;
+                if (columnIsString ^ newValueIsString) {
+                    throw new OperandTypeNotMatchedException();
+                }
+                if (newValueIsString) {
+                    row.getEntries().set(index, new Entry(newValue));
+                }
+                else {
+                    Double newValue_ = Double.valueOf(newValue.toString());
+                    if (type.equals(ColumnType.INT) || type.equals(ColumnType.LONG)) {
+                        row.getEntries().set(index, new Entry(newValue_.longValue()));
+                    }
+                    else {
+                        row.getEntries().set(index, new Entry(newValue_));
+                    }
+                }
+            }
+        }
+        return rowList;
     }
 
     private ArrayList<Row> filterRowList(ArrayList<Row> rowList, Condition condition) {
@@ -311,7 +368,6 @@ public class QueryResult {
         else {
             throw new InvalidStatementException();
         }
-
     }
 
     private Comparable getValueFromComparer(Comparer comparer,

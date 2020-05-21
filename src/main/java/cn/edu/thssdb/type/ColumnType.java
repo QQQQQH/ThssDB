@@ -7,9 +7,11 @@ public enum ColumnType {
             case INT:
             case LONG:
                 return elem instanceof Long;
-            case FLOAT: return elem instanceof Float;
-            case DOUBLE: return elem instanceof Double;
-            case STRING: return elem instanceof String;
+            case FLOAT:
+            case DOUBLE:
+                return elem instanceof Double;
+            case STRING:
+                return elem instanceof String;
             default: return false;
         }
     }
