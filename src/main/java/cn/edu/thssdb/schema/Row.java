@@ -1,5 +1,6 @@
 package cn.edu.thssdb.schema;
 
+import java.beans.Encoder;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -22,6 +23,8 @@ public class Row implements Serializable {
     public ArrayList<Entry> getEntries() {
         return entries;
     }
+
+    public Entry getEntry(int index) { return entries.get(index); }
 
     public void appendEntries(ArrayList<Entry> entries) {
         this.entries.addAll(entries);

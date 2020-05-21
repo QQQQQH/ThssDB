@@ -391,8 +391,31 @@ public class Manager {
                 Table table = database.getTable(statement.tableName);
                 QueryResult queryResult = new QueryResult(table);
                 ArrayList<Row> row2Update = queryResult.updateQuery(statement);
-                for (Row row: row2Update) {
-                    table.update(row);
+                if (row2Update.size() == 0) {
+                    return new SQLExecuteResult("No matched rows to update.", true, false);
+                }
+                int index = queryResult.columnFind(statement.columnName);
+                if (index == -1) {
+                    throw new ColumnDoesNotExistException();
+                }
+                ArrayList<Row> rowUpdated = queryResult.updateRowList(row2Update, index, statement.expression);
+                // check if primary key updated
+                if (index == table.primaryIndex
+                        && !row2Update.get(0).getEntry(index).equals(rowUpdated.get(0).getEntry(index))) {
+                    // update primary key
+                    if (table.checkRowExist(rowUpdated.get(0).getEntry(index))) {
+                        throw new DuplicateKeyException();
+                    }
+                    else {
+                        table.delete(row2Update.get(0));
+                        table.insert(rowUpdated.get(0));
+                    }
+                }
+                else {
+                    // normal update
+                    for (Row row: rowUpdated) {
+                        table.update(row);
+                    }
                 }
                 return new SQLExecuteResult("Update operation succeeds.", true, false);
             }

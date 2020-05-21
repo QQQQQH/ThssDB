@@ -56,7 +56,6 @@ public class QueryResult {
     public ArrayList<Row> updateQuery(UpdateStatement statement) {
         ArrayList<Row> resultRowList_ = getRowListFromTables(null);
         resultRowList_ = filterRowList(resultRowList_, statement.condition);
-        resultRowList_ = updateRowList(resultRowList_, metaInfos.get(0), statement.columnName, statement.expression);
         return resultRowList_;
     }
 
@@ -187,35 +186,38 @@ public class QueryResult {
         return index;
     }
 
-    private ArrayList<Row> updateRowList(ArrayList<Row> rowList, MetaInfo metaInfo, String columnName, Expression expression) {
-        int index = metaInfo.columnFind(columnName);
-        if (index == -1) {
-            throw new ColumnDoesNotExistException();
-        }
-        else {
-            for (Row row: rowList) {
-                Comparable newValue = calcExpression(expression, metaInfo, null, row);
-                ColumnType type = metaInfo.getColumnType(index);
-                boolean columnIsString = type.equals(ColumnType.STRING);
-                boolean newValueIsString = newValue instanceof String;
-                if (columnIsString ^ newValueIsString) {
-                    throw new OperandTypeNotMatchedException();
-                }
-                if (newValueIsString) {
-                    row.getEntries().set(index, new Entry(newValue));
+    public int columnFind(String columnName) {
+        return metaInfos.get(0).columnFind(columnName);
+    }
+
+    public ArrayList<Row> updateRowList(ArrayList<Row> rowList, int index, Expression expression) {
+        MetaInfo metaInfo = metaInfos.get(0);
+        ArrayList<Row> rowList_ = new ArrayList<>();
+        for (Row row: rowList) {
+            Comparable newValue = calcExpression(expression, metaInfo, null, row);
+            ColumnType type = metaInfo.getColumnType(index);
+            boolean columnIsString = type.equals(ColumnType.STRING);
+            boolean newValueIsString = newValue instanceof String;
+            Row row_ = new Row();
+            row_.appendEntries(row.getEntries());
+            if (columnIsString ^ newValueIsString) {
+                throw new OperandTypeNotMatchedException();
+            }
+            if (newValueIsString) {
+                row_.getEntries().set(index, new Entry(newValue));
+            }
+            else {
+                Double newValue_ = Double.valueOf(newValue.toString());
+                if (type.equals(ColumnType.INT) || type.equals(ColumnType.LONG)) {
+                    row_.getEntries().set(index, new Entry(newValue_.longValue()));
                 }
                 else {
-                    Double newValue_ = Double.valueOf(newValue.toString());
-                    if (type.equals(ColumnType.INT) || type.equals(ColumnType.LONG)) {
-                        row.getEntries().set(index, new Entry(newValue_.longValue()));
-                    }
-                    else {
-                        row.getEntries().set(index, new Entry(newValue_));
-                    }
+                    row_.getEntries().set(index, new Entry(newValue_));
                 }
             }
+            rowList_.add(row_);
         }
-        return rowList;
+        return rowList_;
     }
 
     private ArrayList<Row> filterRowList(ArrayList<Row> rowList, Condition condition) {

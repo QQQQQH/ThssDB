@@ -67,12 +67,16 @@ public class Table implements Iterable<Row> {
         }
     }
 
+    public boolean checkRowExist(Entry primary) {
+        return index.contains(primary);
+    }
+
     public void insert(Row row) throws DuplicateKeyException {
         // TODO
         try {
             lock.writeLock().lock();
             Entry primary = row.getEntries().get(primaryIndex);
-            if (index.contains(primary)) {
+            if (checkRowExist(primary)) {
                 throw new DuplicateKeyException();
             }
             index.put(primary, row);
@@ -86,11 +90,11 @@ public class Table implements Iterable<Row> {
         // TODO
         try {
             lock.writeLock().lock();
-            Entry entry = row.getEntries().get(primaryIndex);
-            if (!index.contains(entry)) {
+            Entry primary = row.getEntries().get(primaryIndex);
+            if (!checkRowExist(primary)) {
                 throw new KeyNotExistException();
             }
-            index.remove(entry);
+            index.remove(primary);
         }
         finally {
             lock.writeLock().unlock();
