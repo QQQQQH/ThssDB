@@ -291,7 +291,7 @@ public class MySQLVisitor extends SQLBaseVisitor<Object> {
         if (ctx.column_full_name() != null) {
             comparer = (ColumnFullName) visit(ctx.column_full_name());
         } else {
-            comparer = new LiteralValue((Comparable) visit(ctx.column_full_name()));
+            comparer = new LiteralValue((Comparable) visit(ctx.literal_value()));
         }
         return comparer;
     }

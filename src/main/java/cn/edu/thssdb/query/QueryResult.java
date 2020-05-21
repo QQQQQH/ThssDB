@@ -236,11 +236,11 @@ public class QueryResult {
                 metaInfoRight,
                 row);
         Comparable resultRight = calcExpression(
-                condition.expressionLeft,
+                condition.expressionRight,
                 metaInfoLeft,
                 metaInfoRight,
                 row);
-        if (!resultLeft.getClass().equals(resultRight.getClass())) {
+        if ((resultLeft instanceof String) ^ (resultRight instanceof String)) {
             throw new OperandTypeNotMatchedException();
         }
         int compareResult = resultLeft.toString().compareTo(resultRight.toString());
@@ -293,8 +293,8 @@ public class QueryResult {
             if (comparableLeft instanceof String || comparableRight instanceof String) {
                 throw new InvalidOperandTypeException();
             }
-            Double doubleLeft = (Double)comparableLeft;
-            Double doubleRight = (Double)comparableRight;
+            Double doubleLeft = Double.valueOf(comparableLeft.toString());
+            Double doubleRight = Double.valueOf(comparableRight.toString());
             switch (op) {
                 case ADD: return doubleLeft + doubleRight;
                 case SUB: return doubleLeft - doubleRight;
