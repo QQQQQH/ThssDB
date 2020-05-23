@@ -5,6 +5,7 @@ import cn.edu.thssdb.index.BPlusTree;
 import cn.edu.thssdb.parser.Statement.Condition;
 import cn.edu.thssdb.parser.Statement.Expression;
 import cn.edu.thssdb.type.ColumnType;
+import cn.edu.thssdb.utils.Global;
 import javafx.util.Pair;
 
 import java.io.File;
@@ -27,7 +28,7 @@ public class Table implements Iterable<Row> {
     public String tableName;
     public ArrayList<Column> columns;
     public BPlusTree<Entry, Row> index;
-    public int primaryIndex;
+    int primaryIndex;
 
     public Table(String databaseName, String tableName, ArrayList<Column> columns) {
         // TODO
@@ -51,6 +52,7 @@ public class Table implements Iterable<Row> {
         }
         this.index = new BPlusTree<>();
         this.lock = new ReentrantReadWriteLock();
+        recover();
     }
 
     private void recover() {
@@ -67,11 +69,11 @@ public class Table implements Iterable<Row> {
         }
     }
 
-    public boolean checkRowExist(Entry primary) {
+    boolean checkRowExist(Entry primary) {
         return index.contains(primary);
     }
 
-    public void insert(Row row) throws DuplicateKeyException {
+    void insert(Row row) throws DuplicateKeyException {
         // TODO
         try {
             lock.writeLock().lock();
@@ -86,7 +88,7 @@ public class Table implements Iterable<Row> {
         }
     }
 
-    public void delete(Row row) {
+    void delete(Row row) {
         // TODO
         try {
             lock.writeLock().lock();
@@ -101,7 +103,7 @@ public class Table implements Iterable<Row> {
         }
     }
 
-    public void update(Row row) {
+    void update(Row row) {
         // TODO
         try {
             lock.writeLock().lock();
@@ -115,9 +117,9 @@ public class Table implements Iterable<Row> {
         }
     }
 
-    private void serialize() {
+    void serialize() {
         // TODO
-        File dir = new File(databaseName+File.separator+"data");
+        File dir = new File(Global.DATABASE_DIR+File.separator+databaseName+File.separator+"data");
         if (!dir.exists() && !dir.mkdirs()) {
             System.err.print("Fail to serialize due to mkdirs error!");
             return;
@@ -137,7 +139,7 @@ public class Table implements Iterable<Row> {
 
     private ArrayList<Row> deserialize() {
         // TODO
-        File file = new File(databaseName+File.separator+"data"+File.separator+tableName);
+        File file = new File(Global.DATABASE_DIR+File.separator+databaseName+File.separator+"data"+File.separator+tableName);
         if (!file.exists()) {
             return new ArrayList<>();
         }

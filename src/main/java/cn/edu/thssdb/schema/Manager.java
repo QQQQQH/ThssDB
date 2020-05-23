@@ -6,12 +6,13 @@ import cn.edu.thssdb.parser.Statement.*;
 import cn.edu.thssdb.query.QueryResult;
 
 import cn.edu.thssdb.type.ColumnType;
+import cn.edu.thssdb.utils.Global;
 import org.antlr.v4.runtime.CharStream;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.tree.ParseTree;
 
-import java.io.IOException;
+import java.io.*;
 import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
@@ -32,10 +33,70 @@ public class Manager {
 
     private Manager() {
         // TODO
-        this.databases = new HashMap<>();
-        this.currentDatabase = null;
+        databases = new HashMap<>();
+        currentDatabase = null;
         lock = new ReentrantReadWriteLock();
         sqlExecutor = new SQLExecutor();
+        recover();
+    }
+
+    private void persist() {
+        File dir = new File(Global.DATABASE_DIR);
+        if (!dir.exists() && !dir.mkdirs()) {
+            System.err.println("Fail to persist manager due to mkdirs error!");
+            return;
+        }
+        try {
+            lock.writeLock().lock();
+            ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(dir.toString()+File.separator+"DATABASES_NAME"));
+            for (String databaseName: databases.keySet()) {
+                oos.writeObject(databaseName);
+            }
+            if (currentDatabase != null) {
+                Database database = databases.get(currentDatabase);
+                if (database == null) {
+                    System.err.println("Current database is null while trying to persist!");
+                }
+                else {
+                    database.quit();
+                }
+            }
+        }
+        catch (FileNotFoundException e) {
+            System.err.print("Fail to persist manager due to FileNotFoundException!");
+        }
+        catch (IOException e) {
+            System.err.print("Fail to persist manager due to IOException!");
+        }
+        finally {
+            lock.writeLock().unlock();
+        }
+    }
+
+    private void recover() {
+        File file = new File(Global.DATABASE_DIR+File.separator+"DATABASES_NAME");
+        if (!file.exists()) return;
+        try {
+            lock.writeLock().lock();
+            FileInputStream fis = new FileInputStream(file);
+            ObjectInputStream ois = new ObjectInputStream(fis);
+            while (fis.available() > 0) {
+                String databaseName = (String)ois.readObject();
+                databases.put(databaseName, new Database(databaseName));
+            }
+        }
+        catch (FileNotFoundException e) {
+            System.err.println("Fail to recover manager due to FileNotFoundException!");
+        }
+        catch (IOException e) {
+            System.err.println("Fail to recover manager due to IOException!");
+        }
+        catch (ClassNotFoundException e) {
+            System.err.println("Fail to recover manager due to ClassNotFoundException!");
+        }
+        finally {
+            lock.writeLock().unlock();
+        }
     }
 
     private void createDatabaseIfNotExists(String name) throws DatabaseAlreadyExistException {
@@ -66,7 +127,7 @@ public class Manager {
 
             databases.remove(name);
             // remove database file
-            Path databaseDirector = Paths.get(name);
+            Path databaseDirector = Paths.get(Global.DATABASE_DIR+File.separator+name);
             Files.walkFileTree(databaseDirector, new SimpleFileVisitor<Path>() {
                 @Override
                 public FileVisitResult visitFile(Path file, BasicFileAttributes attributes) throws IOException {
@@ -91,15 +152,32 @@ public class Manager {
 
     private void switchDatabase(String name) throws DatabaseNotExistException {
         // TODO
+        if (name.equals(currentDatabase)) return;
         try {
             lock.writeLock().lock();
-            if (databases.get(name) == null) {
+            Database database = databases.get(name);
+            if (database == null) {
                 throw new DatabaseNotExistException();
+            }
+            database.recover();
+            if (currentDatabase != null) {
+                Database current = databases.get(currentDatabase);
+                if (current == null) {
+                    System.err.println("Current database is null while trying to persist!");
+                }
+                else {
+                    current.quit();
+                }
             }
             currentDatabase = name;
         } finally {
             lock.writeLock().unlock();
         }
+    }
+
+    public void quit() {
+        persist();
+        currentDatabase = null;
     }
 
     private Database getDatabase() throws DatabaseNotSelectException {

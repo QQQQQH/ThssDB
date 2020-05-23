@@ -21,4 +21,6 @@ public class Global {
 
     public static final String USERNAME = "SA";
     public static final String PASSWORD = "";
+
+    public static final String DATABASE_DIR = "db";
 }

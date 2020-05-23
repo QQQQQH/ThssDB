@@ -66,6 +66,7 @@ public class ThssDB {
     }
 
     public void clearSession(long sessionId) {
+        manager.quit();
         sessionList.remove(sessionId);
     }
 
