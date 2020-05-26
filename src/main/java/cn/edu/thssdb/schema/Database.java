@@ -1,13 +1,8 @@
 package cn.edu.thssdb.schema;
 
-import cn.edu.thssdb.exception.ColumnDoesNotExistException;
 import cn.edu.thssdb.exception.TableAlreadyExistException;
 import cn.edu.thssdb.exception.TableNotExistException;
-import cn.edu.thssdb.parser.Statement.ColumnDef;
-import cn.edu.thssdb.query.QueryResult;
-import cn.edu.thssdb.query.QueryTable;
 import cn.edu.thssdb.type.ColumnType;
-import cn.edu.thssdb.parser.Statement.ColumnType.Type;
 import cn.edu.thssdb.utils.Global;
 
 import java.io.*;
@@ -19,11 +14,10 @@ public class Database {
 
     private String name;
     private HashMap<String, Table> tables;
-    ReentrantReadWriteLock lock;
+    private ReentrantReadWriteLock lock;
 
     public Database(String name) {
         this.name = name;
-
         lock = new ReentrantReadWriteLock();
         tables = null;
     }
@@ -53,7 +47,7 @@ public class Database {
                     System.err.println("Table is null in index while trying to persist.");
                 }
                 else {
-                    table.serialize();
+                    table.persist();
                 }
             }
             oos.close();
@@ -116,11 +110,16 @@ public class Database {
     }
 
     boolean checkTableExist(String tableName) {
-        return tables.get(tableName) != null;
+        try {
+            lock.readLock().lock();
+            return tables.get(tableName) != null;
+        }
+        finally {
+            lock.readLock().unlock();
+        }
     }
 
-    void create(String tableName, ArrayList<Column> columns)
-            throws TableAlreadyExistException {
+    void create(String tableName, ArrayList<Column> columns) {
         try {
             lock.writeLock().lock();
             if (checkTableExist(tableName)) {
@@ -134,7 +133,7 @@ public class Database {
         }
     }
 
-    void drop(String tableName) throws TableNotExistException {
+    void drop(String tableName) {
         // TODO
         try {
             lock.writeLock().lock();
@@ -157,9 +156,9 @@ public class Database {
         }
     }
 
-    Table getTable(String tableName) throws TableNotExistException {
+    Table getTable(String tableName) {
         try {
-            lock.writeLock().lock();
+            lock.readLock().lock();
             Table table = tables.get(tableName);
             if (table == null) {
                 throw new TableNotExistException();
@@ -167,13 +166,19 @@ public class Database {
             return table;
         }
         finally {
-            lock.writeLock().unlock();
+            lock.readLock().unlock();
         }
     }
 
     void quit() {
         // TODO
         persist();
-        tables = null;
+        try {
+            lock.writeLock().lock();
+            tables = null;
+        }
+        finally {
+            lock.writeLock().unlock();
+        }
     }
 }

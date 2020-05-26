@@ -34,4 +34,8 @@ public class QueryTable implements Iterator<Row> {
     void refresh() {
         iterator = this.table.iterator();
     }
+
+    void readLock() { this.table.readLock(); }
+
+    void readUnlock() { this.table.readUnlock(); }
 }

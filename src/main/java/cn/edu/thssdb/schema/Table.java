@@ -69,8 +69,25 @@ public class Table implements Iterable<Row> {
         }
     }
 
+    void persist() {
+        try {
+            lock.writeLock().lock();
+            serialize();
+        }
+        finally {
+            lock.writeLock().unlock();
+        }
+    }
+
     boolean checkRowExist(Entry primary) {
-        return index.contains(primary);
+        try {
+            lock.readLock().lock();
+            return index.contains(primary);
+        }
+        finally {
+            lock.readLock().unlock();
+        }
+
     }
 
     void insert(Row row) throws DuplicateKeyException {
@@ -117,7 +134,7 @@ public class Table implements Iterable<Row> {
         }
     }
 
-    void serialize() {
+    private void serialize() {
         // TODO
         File dir = new File(Global.DATABASE_DIR+File.separator+databaseName+File.separator+"data");
         if (!dir.exists() && !dir.mkdirs()) {
@@ -125,6 +142,7 @@ public class Table implements Iterable<Row> {
             return;
         }
         try {
+            lock.writeLock().lock();
             ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(dir.toString()+File.separator+tableName));
             for (Row row : this) {
                 oos.writeObject(row);
@@ -162,6 +180,14 @@ public class Table implements Iterable<Row> {
             System.err.println("Fail to deserialize due to ClassNotFoundException!");
         }
         return rows;
+    }
+
+    public void readLock() {
+        lock.readLock().lock();
+    }
+
+    public void readUnlock() {
+        lock.readLock().unlock();
     }
 
     private class TableIterator implements Iterator<Row> {

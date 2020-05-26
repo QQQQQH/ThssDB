@@ -243,16 +243,20 @@ public class QueryResult {
         ArrayList<Row> combinedRowList = new ArrayList<>();
         if (queryTables.size() == 1) {
             QueryTable queryTableLeft = queryTables.get(0);
+            queryTableLeft.readLock();
             while (queryTableLeft.hasNext()) {
                 Row row = queryTableLeft.next();
                 if (condition == null || calcCondition(condition, metaInfos.get(0), null, row)) {
                     combinedRowList.add(row);
                 }
             }
+            queryTableLeft.readUnlock();
         }
         else if (queryTables.size() == 2) {
             QueryTable queryTableLeft = queryTables.get(0);
             QueryTable queryTableRight = queryTables.get(1);
+            queryTableLeft.readLock();
+            queryTableRight.readLock();
             while (queryTableLeft.hasNext()) {
                 Row rowLeft = queryTableLeft.next();
                 queryTableRight.refresh();
@@ -263,6 +267,8 @@ public class QueryResult {
                     }
                 }
             }
+            queryTableLeft.readUnlock();
+            queryTableRight.readUnlock();
         }
         return combinedRowList;
     }

@@ -108,7 +108,8 @@ public class Manager {
             }
             Database database = new Database(name);
             databases.put(name, database);
-        } finally {
+        }
+        finally {
             lock.writeLock().unlock();
         }
     }
@@ -142,10 +143,12 @@ public class Manager {
                 }
 
             });
-        } catch (IOException e) {
+        }
+        catch (IOException e) {
             System.err.println("Fail to remove database file!");
             e.printStackTrace();
-        } finally {
+        }
+        finally {
             lock.writeLock().unlock();
         }
     }
@@ -170,27 +173,36 @@ public class Manager {
                 }
             }
             currentDatabase = name;
-        } finally {
+        }
+        finally {
             lock.writeLock().unlock();
         }
     }
 
     public void quit() {
         persist();
-        currentDatabase = null;
+        try {
+            lock.writeLock().lock();
+            currentDatabase = null;
+        }
+        finally {
+            lock.writeLock().unlock();
+        }
+
     }
 
     private Database getDatabase() throws DatabaseNotSelectException {
         try {
-            lock.writeLock().lock();
+            lock.readLock().lock();
             if (currentDatabase == null) {
                 throw new DatabaseNotSelectException();
             }
             else {
                 return databases.get(currentDatabase);
             }
-        } finally {
-            lock.writeLock().unlock();
+        }
+        finally {
+            lock.readLock().unlock();
         }
     }
 
