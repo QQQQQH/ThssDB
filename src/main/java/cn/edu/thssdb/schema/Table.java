@@ -87,7 +87,7 @@ public class Table implements Iterable<Row> {
     void insert(Row row) throws DuplicateKeyException {
         // TODO
         try {
-            lock.writeLock().lock();
+//            lock.writeLock().lock();
             Entry primary = row.getEntries().get(primaryIndex);
             if (checkRowExist(primary)) {
                 throw new DuplicateKeyException();
@@ -95,36 +95,36 @@ public class Table implements Iterable<Row> {
             index.put(primary, row);
         }
         finally {
-            lock.writeLock().unlock();
+//            lock.writeLock().unlock();
         }
     }
 
     void delete(Row row) {
         // TODO
         try {
-            lock.writeLock().lock();
+//            lock.writeLock().lock();
             Entry primary = row.getEntries().get(primaryIndex);
-//            if (!checkRowExist(primary)) {
-//                throw new KeyNotExistException();
-//            }
+            if (!checkRowExist(primary)) {
+                throw new KeyNotExistException();
+            }
             index.remove(primary);
         }
         finally {
-            lock.writeLock().unlock();
+//            lock.writeLock().unlock();
         }
     }
 
     void update(Row row) {
         // TODO
         try {
-            lock.writeLock().lock();
+//            lock.writeLock().lock();
             Entry entry = row.getEntries().get(primaryIndex);
             if (!index.contains(entry))
                 throw new KeyNotExistException();
             index.update(entry, row);
         }
         finally {
-            lock.writeLock().unlock();
+//            lock.writeLock().unlock();
         }
     }
 

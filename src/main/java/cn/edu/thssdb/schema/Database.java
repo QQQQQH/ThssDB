@@ -12,8 +12,8 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 public class Database {
     String name;
-    private HashMap<String, Table> tables;
-    private ReentrantReadWriteLock lock;
+    HashMap<String, Table> tables;
+    ReentrantReadWriteLock lock;
 
     public Database(String name) {
         this.name = name;
@@ -21,7 +21,7 @@ public class Database {
         tables = null;
     }
 
-    private void persist() {
+    void persist() {
         // TODO
         if (tables == null) {
             return;

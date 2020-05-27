@@ -27,7 +27,6 @@ public class ThssDB {
     private static Manager manager;
 
     private static long sessionCnt;
-    private static List<Long> sessionList;
 
     public static ThssDB getInstance() {
         return ThssDBHolder.INSTANCE;
@@ -35,7 +34,6 @@ public class ThssDB {
 
     public static void main(String[] args) {
         sessionCnt = 0;
-        sessionList = new ArrayList<>();
         manager = Manager.getInstance();
         ThssDB server = ThssDB.getInstance();
         server.start();
@@ -61,21 +59,20 @@ public class ThssDB {
 
     public long setupSession() {
         long sessionId = sessionCnt++;
-        sessionList.add(sessionId);
+        manager.addSession(sessionId);
         return sessionId;
     }
 
     public void clearSession(long sessionId) {
-        manager.quit();
-        sessionList.remove(sessionId);
+        manager.deleteSession(sessionId);
     }
 
     public boolean checkSession(long sessionId) {
-        return sessionList.contains(sessionId);
+        return manager.checkSessionExist(sessionId);
     }
 
-    public SQLExecuteResult execute(String sql) {
-        List<SQLExecuteResult> resultList = manager.execute(sql);
+    public SQLExecuteResult execute(String sql, long sessionId) {
+        List<SQLExecuteResult> resultList = manager.execute(sql, sessionId);
         return resultList.get(0);
     }
 

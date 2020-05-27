@@ -49,7 +49,7 @@ public class IServiceHandler implements IService.Iface {
         ExecuteStatementResp resp = new ExecuteStatementResp();
         if (thssDB.checkSession(req.getSessionId())) {
             // exec
-            SQLExecuteResult result = thssDB.execute(req.getStatement());
+            SQLExecuteResult result = thssDB.execute(req.getStatement(), req.sessionId);
             System.out.println("msg:"+result.getMessage());
             resp.setMsg(result.getMessage());
             resp.setStatus(new Status(result.isIsSucceed() ? Global.SUCCESS_CODE : Global.FAILURE_CODE));
