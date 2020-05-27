@@ -71,13 +71,21 @@ public class ThssDB {
         manager.deleteSession(sessionId);
     }
 
-    public boolean checkSession(long sessionId) {
-        return manager.checkSessionExist(sessionId);
-    }
-
     public SQLExecuteResult execute(String sql, long sessionId) {
         List<SQLExecuteResult> resultList = manager.execute(sql, sessionId);
         return resultList.get(0);
+    }
+
+    public int setAutoCommit(boolean autoCommit, long sessionId) {
+        return manager.setAutoCommit(autoCommit, sessionId);
+    }
+
+    public int beginTransaction(long sessionId) {
+        return manager.beginTransaction(sessionId);
+    }
+
+    public int commit(long sessionId) {
+        return manager.commit(sessionId);
     }
 
     private static class ThssDBHolder {

@@ -59,22 +59,58 @@ public class Manager {
         }
     }
 
-    public static boolean checkSessionExist(long sessionId) {
-        for (Session session: sessionList) {
-            if (session.sessionId == sessionId) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private static  Session getSession(long sessionId) {
+    private static Session getSession(long sessionId) {
         for (Session session: sessionList) {
             if (session.sessionId == sessionId) {
                 return session;
             }
         }
         return null;
+    }
+
+    public static int setAutoCommit(boolean autoCommit, long sessionId) {
+        Session session = getSession(sessionId);
+        if (session == null) {
+            return 0;
+        }
+        else {
+            if (session.inTransaction) {
+                return 2;
+            }
+            session.autoCommit = autoCommit;
+            return 1;
+        }
+    }
+
+    public static int beginTransaction(long sessionId) {
+        Session session = getSession(sessionId);
+        if (session == null) {
+            return 0;
+        }
+        else {
+            if (session.inTransaction) {
+                return 2;
+            }
+            session.inTransaction = true;
+            return 1;
+        }
+    }
+
+    public static int commit(long sessionId) {
+        Session session = getSession(sessionId);
+        if (session == null) {
+            return 0;
+        }
+        else {
+            for (ReentrantReadWriteLock lock: session.lockList) {
+                lock.writeLock().unlock();
+            }
+            session.lockList.clear();
+            logger.commitLog(session.logList);
+            session.logList.clear();
+            session.inTransaction = false;
+            return 1;
+        }
     }
 
     private static void persist() {
@@ -139,8 +175,8 @@ public class Manager {
         }
     }
 
-    private static boolean ownLock(ArrayList<ReentrantReadWriteLock> lockList, ReentrantReadWriteLock lock) {
-        return lockList.contains(lock);
+    private static boolean notOwnLock(ArrayList<ReentrantReadWriteLock> lockList, ReentrantReadWriteLock lock) {
+        return !lockList.contains(lock);
     }
 
     private static void lockAll() {
@@ -188,7 +224,7 @@ public class Manager {
 
     private static void deleteDatabase(String name, Session session) {
         // TODO
-        try {
+//        try {
             if (databases.get(name) == null) {
                 throw new DatabaseNotExistException();
             }
@@ -204,25 +240,25 @@ public class Manager {
 
             databases.remove(name);
             // remove database file
-            Path databaseDirector = Paths.get(Global.DATABASE_DIR+File.separator+name);
-            Files.walkFileTree(databaseDirector, new SimpleFileVisitor<Path>() {
-                @Override
-                public FileVisitResult visitFile(Path file, BasicFileAttributes attributes) throws IOException {
-                    Files.delete(file);
-                    return FileVisitResult.CONTINUE;
-                }
-
-                @Override
-                public FileVisitResult postVisitDirectory(Path dir, IOException exc) throws IOException {
-                    Files.delete(dir);
-                    return FileVisitResult.CONTINUE;
-                }
-
-            });
-        }
-        catch (IOException e) {
-            System.err.println("Fail to remove database file!");
-        }
+//            Path databaseDirector = Paths.get(Global.DATABASE_DIR+File.separator+name);
+//            Files.walkFileTree(databaseDirector, new SimpleFileVisitor<Path>() {
+//                @Override
+//                public FileVisitResult visitFile(Path file, BasicFileAttributes attributes) throws IOException {
+//                    Files.delete(file);
+//                    return FileVisitResult.CONTINUE;
+//                }
+//
+//                @Override
+//                public FileVisitResult postVisitDirectory(Path dir, IOException exc) throws IOException {
+//                    Files.delete(dir);
+//                    return FileVisitResult.CONTINUE;
+//                }
+//
+//            });
+//        }
+//        catch (IOException e) {
+//            System.err.println("Fail to remove database file!");
+//        }
     }
 
     private static void switchDatabase(String name, Session session) {
@@ -233,6 +269,9 @@ public class Manager {
             Database database = databases.get(name);
             if (database == null) {
                 throw new DatabaseNotExistException();
+            }
+            if (database.tables.isEmpty()) {
+                database.recover();
             }
 //            if (session.currentDatabase != null) {
 //                Database current = databases.get(session.currentDatabase);
@@ -300,7 +339,7 @@ public class Manager {
         }
     }
 
-    public List<SQLExecutor.SQLExecuteResult> execute(String sql, long sessionId) {
+    public static List<SQLExecutor.SQLExecuteResult> execute(String sql, long sessionId) {
         Session session = getSession(sessionId);
         if (session == null) {
             List<SQLExecutor.SQLExecuteResult> resultList = new ArrayList<>();
@@ -424,7 +463,8 @@ public class Manager {
 
         private SQLExecuteResult createDatabase(CreatDatabaseStatement statement, Session session) {
             try {
-                if (!ownLock(session.lockList, lock)) {
+                session.inTransaction = true;
+                if (notOwnLock(session.lockList, lock)) {
                     lockAll();
                     session.lockList.add(lock);
                 }
@@ -438,6 +478,7 @@ public class Manager {
                     lock.writeLock().unlock();
                     logger.commitLog(session.logList);
                     session.logList.clear();
+                    session.inTransaction = false;
                 }
 
                 return new SQLExecuteResult("Create database succeeds.", true, false);
@@ -449,7 +490,8 @@ public class Manager {
 
         private SQLExecuteResult dropDatabase(DropDatabaseStatement statement, Session session) {
             try {
-                if (!ownLock(session.lockList, lock)) {
+                session.inTransaction = true;
+                if (notOwnLock(session.lockList, lock)) {
                     lockAll();
                     session.lockList.add(lock);
                 }
@@ -463,6 +505,7 @@ public class Manager {
                     lock.writeLock().unlock();
                     logger.commitLog(session.logList);
                     session.logList.clear();
+                    session.inTransaction = false;
                 }
 
                 return new SQLExecuteResult("Drop database succeeds.", true, false);
@@ -489,7 +532,8 @@ public class Manager {
                     throw new TableAlreadyExistException();
                 }
 
-                if (!ownLock(session.lockList, database.lock)) {
+                session.inTransaction = true;
+                if (notOwnLock(session.lockList, database.lock)) {
                     lockDatabase(database);
                     session.lockList.add(database.lock);
                 }
@@ -531,6 +575,7 @@ public class Manager {
                     database.lock.writeLock().unlock();
                     logger.commitLog(session.logList);
                     session.logList.clear();
+                    session.inTransaction = false;
                 }
 
                 return new SQLExecuteResult("Create table succeeds.", true, false);
@@ -547,7 +592,8 @@ public class Manager {
                     throw new TableNotExistException();
                 }
 
-                if (!ownLock(session.lockList, database.lock)) {
+                session.inTransaction = true;
+                if (notOwnLock(session.lockList, database.lock)) {
                     lockDatabase(database);
                     session.lockList.add(database.lock);
                 }
@@ -561,6 +607,7 @@ public class Manager {
                     database.lock.writeLock().unlock();
                     logger.commitLog(session.logList);
                     session.logList.clear();
+                    session.inTransaction = false;
                 }
 
                 return new SQLExecuteResult("Drop table succeeds.", true, false);
@@ -575,7 +622,8 @@ public class Manager {
                 Database database = Manager.getInstance().getDatabase(session);
                 Table table = database.getTable(statement.tableName);
 
-                if (!ownLock(session.lockList, table.lock)) {
+                session.inTransaction = true;
+                if (notOwnLock(session.lockList, table.lock)) {
                     lockTable(database, table);
                     session.lockList.add(table.lock);
                 }
@@ -632,6 +680,7 @@ public class Manager {
                     table.lock.writeLock().unlock();
                     logger.commitLog(session.logList);
                     session.logList.clear();
+                    session.inTransaction = false;
                 }
 
                 return new SQLExecuteResult("Insert operation succeeds.", true, false);
@@ -646,7 +695,8 @@ public class Manager {
                 Database database = Manager.getInstance().getDatabase(session);
                 Table table = database.getTable(statement.tableName);
 
-                if (!ownLock(session.lockList, table.lock)) {
+                session.inTransaction = true;
+                if (notOwnLock(session.lockList, table.lock)) {
                     lockTable(database, table);
                     session.lockList.add(table.lock);
                 }
@@ -664,6 +714,7 @@ public class Manager {
                     table.lock.writeLock().unlock();
                     logger.commitLog(session.logList);
                     session.logList.clear();
+                    session.inTransaction = false;
                 }
 
                 return new SQLExecuteResult("Delete operation succeeds.", true, false);
@@ -678,7 +729,8 @@ public class Manager {
                 Database database = Manager.getInstance().getDatabase(session);
                 Table table = database.getTable(statement.tableName);
 
-                if (!ownLock(session.lockList, table.lock)) {
+                session.inTransaction = true;
+                if (notOwnLock(session.lockList, table.lock)) {
                     lockTable(database, table);
                     session.lockList.add(table.lock);
                 }
@@ -726,6 +778,7 @@ public class Manager {
                     table.lock.writeLock().unlock();
                     logger.commitLog(session.logList);
                     session.logList.clear();
+                    session.inTransaction = false;
                 }
 
                 return new SQLExecuteResult("Update operation succeeds.", true, false);
@@ -810,6 +863,9 @@ public class Manager {
         }
 
         private void addDelete(ArrayList<String> logList, String databaseName, String tableName, ArrayList<Row> row2Delete) {
+            if (row2Delete.size() == 0) {
+                return;
+            }
             ArrayList<String> log = new ArrayList<>();
             log.add(Statement.Type.DELETE.toString());
             log.add(databaseName);
@@ -830,6 +886,9 @@ public class Manager {
         }
 
         private void addUpdate(ArrayList<String> logList, String databaseName, String tableName, ArrayList<Row> rowUpdated) {
+            if (rowUpdated.size() == 0) {
+                return;
+            }
             ArrayList<String> log = new ArrayList<>();
             log.add(Statement.Type.UPDATE.toString());
             log.add(databaseName);
@@ -986,6 +1045,7 @@ public class Manager {
 class Session {
     long sessionId;
     boolean autoCommit;
+    boolean inTransaction;
     ArrayList<String> logList;
     ArrayList<ReentrantReadWriteLock> lockList;
     String currentDatabase;
@@ -993,6 +1053,7 @@ class Session {
     Session(long sessionId) {
         this.sessionId = sessionId;
         autoCommit = true;
+        inTransaction = false;
         logList = new ArrayList<>();
         lockList = new ArrayList<>();
         currentDatabase = null;

@@ -71,16 +71,25 @@ public class Client {
                     case Global.QUIT:
                         open = false;
                         break;
-
                     case Global.CONNECT:
                         connect();
                         break;
                     case Global.DISCONNECT:
                         disconnect();
                         break;
-
+                    case Global.SET_AUTO_COMMIT_TRUE:
+                        setAutoCommit(true);
+                        break;
+                    case Global.SET_AUTO_COMMIT_FALSE:
+                        setAutoCommit(false);
+                        break;
+                    case Global.BEGIN_TRANSACTION:
+                        beginTransaction();
+                        break;
+                    case Global.COMMIT:
+                        commit();
+                        break;
                     default:
-//                        println("Invalid statements!");
                         execute(msg);
                         break;
                 }
@@ -160,6 +169,48 @@ public class Client {
                 // show result
                 println("Result will be showed here.");
             }
+            println(resp.getMsg());
+        } catch (TException e) {
+            logger.error(e.getMessage());
+        }
+    }
+
+    private static void setAutoCommit(boolean autoCommit) {
+        if (sessionId == -1) {
+            println("Client is not connected!");
+            return;
+        }
+        SetAutoCommitReq req = new SetAutoCommitReq(sessionId, autoCommit);
+        try {
+            SetAutoCommitResp resp = client.setAutoCommit(req);
+            println(resp.getMsg());
+        } catch (TException e) {
+            logger.error(e.getMessage());
+        }
+    }
+
+    private static void beginTransaction() {
+        if (sessionId == -1) {
+            println("Client is not connected!");
+            return;
+        }
+        BeginTransactionReq req = new BeginTransactionReq(sessionId);
+        try {
+            BeginTransactionResp resp = client.beginTransaction(req);
+            println(resp.getMsg());
+        } catch (TException e) {
+            logger.error(e.getMessage());
+        }
+    }
+
+    private static void commit() {
+        if (sessionId == -1) {
+            println("Client is not connected!");
+            return;
+        }
+        CommitReq req = new CommitReq(sessionId);
+        try {
+            CommitResp resp = client.commit(req);
             println(resp.getMsg());
         } catch (TException e) {
             logger.error(e.getMessage());
