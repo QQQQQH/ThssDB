@@ -2,32 +2,26 @@ package cn.edu.thssdb.schema;
 
 import cn.edu.thssdb.exception.*;
 import cn.edu.thssdb.index.BPlusTree;
-import cn.edu.thssdb.parser.Statement.Condition;
-import cn.edu.thssdb.parser.Statement.Expression;
-import cn.edu.thssdb.type.ColumnType;
 import cn.edu.thssdb.utils.Global;
 import javafx.util.Pair;
 
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 
-import java.lang.reflect.Array;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Iterator;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 public class Table implements Iterable<Row> {
     ReentrantReadWriteLock lock;
-    private String databaseName;
+    String databaseName;
     public String tableName;
     public ArrayList<Column> columns;
-    public BPlusTree<Entry, Row> index;
+    BPlusTree<Entry, Row> index;
     int primaryIndex;
 
     public Table(String databaseName, String tableName, ArrayList<Column> columns) {
@@ -110,9 +104,9 @@ public class Table implements Iterable<Row> {
         try {
             lock.writeLock().lock();
             Entry primary = row.getEntries().get(primaryIndex);
-            if (!checkRowExist(primary)) {
-                throw new KeyNotExistException();
-            }
+//            if (!checkRowExist(primary)) {
+//                throw new KeyNotExistException();
+//            }
             index.remove(primary);
         }
         finally {

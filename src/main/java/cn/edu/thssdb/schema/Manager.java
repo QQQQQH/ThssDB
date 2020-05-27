@@ -25,7 +25,10 @@ public class Manager {
     private HashMap<String, Database> databases;
     private String currentDatabase;
     private static SQLExecutor sqlExecutor;
+    private static Logger logger;
     private static ReentrantReadWriteLock lock;
+    private static boolean autoCommit;
+    private static ArrayList<String> logList;
 
     public static Manager getInstance() {
         return Manager.ManagerHolder.INSTANCE;
@@ -36,7 +39,12 @@ public class Manager {
         databases = new HashMap<>();
         currentDatabase = null;
         lock = new ReentrantReadWriteLock();
+        logger = new Logger();
         sqlExecutor = new SQLExecutor();
+
+        autoCommit = true;
+        logList = new ArrayList<>();
+
         recover();
     }
 
@@ -96,6 +104,16 @@ public class Manager {
         }
         finally {
             lock.writeLock().unlock();
+        }
+    }
+
+    private boolean checkDatabaseExist(String name) {
+        try {
+            lock.readLock().lock();
+            return databases.get(name) != null;
+        }
+        finally {
+            lock.readLock().unlock();
         }
     }
 
@@ -325,6 +343,9 @@ public class Manager {
         private SQLExecuteResult createDatabase(CreatDatabaseStatement statement) {
             try {
                 Manager.getInstance().createDatabaseIfNotExists(statement.databaseName);
+
+                logger.addCreateDatabase(logList, statement.databaseName);
+
                 return new SQLExecuteResult("Create database succeeds.", true, false);
             }
             catch (Exception e) {
@@ -335,6 +356,9 @@ public class Manager {
         private SQLExecuteResult dropDatabase(DropDatabaseStatement statement) {
             try {
                 Manager.getInstance().deleteDatabase(statement.databaseName);
+
+                logger.addDropDatabase(logList, statement.databaseName);
+
                 return new SQLExecuteResult("Drop database succeeds.", true, false);
             }
             catch (Exception e) {
@@ -387,6 +411,9 @@ public class Manager {
                     }
                 }
                 database.create(statement.tableName, columnsList);
+
+                logger.addCreateTable(logList, database.name, statement.tableName, columnsList);
+
                 return new SQLExecuteResult("Create table succeeds.", true, false);
             }
             catch (Exception e) {
@@ -397,7 +424,13 @@ public class Manager {
         private SQLExecuteResult dropTable(DropTableStatement statement) {
             try {
                 Database database = Manager.getInstance().getDatabase();
+                if (!database.checkTableExist(statement.tableName)) {
+                    throw new TableNotExistException();
+                }
                 database.drop(statement.tableName);
+
+                logger.addDropTable(logList, database.name, statement.tableName);
+
                 return new SQLExecuteResult("Drop table succeeds.", true, false);
             }
             catch (Exception e) {
@@ -451,7 +484,11 @@ public class Manager {
                         throw new ColumnDoesNotExistException();
                     }
                 }
-                table.insert(new Row(entryList));
+                Row row = new Row(entryList);
+                table.insert(row);
+
+                logger.addInsert(logList, database.name, statement.tableName, row);
+
                 return new SQLExecuteResult("Insert operation succeeds.", true, false);
             }
             catch (Exception e) {
@@ -468,6 +505,9 @@ public class Manager {
                 for (Row row: row2Delete) {
                     table.delete(row);
                 }
+
+                logger.addDelete(logList, database.name, statement.tableName, row2Delete);
+
                 return new SQLExecuteResult("Delete operation succeeds.", true, false);
             }
             catch (Exception e) {
@@ -497,8 +537,15 @@ public class Manager {
                         throw new DuplicateKeyException();
                     }
                     else {
-                        table.delete(row2Update.get(0));
-                        table.insert(rowUpdated.get(0));
+                        Row rowBefore = row2Update.get(0);
+                        table.delete(rowBefore);
+
+                        logger.addDelete(logList, database.name, statement.tableName, rowBefore);
+
+                        Row rowAfter = rowUpdated.get(0);
+                        table.insert(rowAfter);
+
+                        logger.addInsert(logList, database.name, statement.tableName, rowAfter);
                     }
                 }
                 else {
@@ -506,6 +553,8 @@ public class Manager {
                     for (Row row: rowUpdated) {
                         table.update(row);
                     }
+
+                    logger.addUpdate(logList, database.name, statement.tableName, rowUpdated);
                 }
                 return new SQLExecuteResult("Update operation succeeds.", true, false);
             }
@@ -535,6 +584,106 @@ public class Manager {
             }
             catch (Exception e) {
                 return new SQLExecuteResult(e.getMessage(), false, false);
+            }
+        }
+    }
+
+    private static class Logger {
+        private ReentrantReadWriteLock lock;
+
+        private Logger() {
+            lock = new ReentrantReadWriteLock();
+        }
+
+        private void addCreateDatabase(ArrayList<String> logList, String databaseName) {
+            ArrayList<String> log = new ArrayList<>();
+            log.add(Statement.Type.CREATE_DATABASE.toString());
+            log.add(databaseName);
+            logList.add(String.join("|", log));
+        }
+
+        private void addDropDatabase(ArrayList<String> logList, String databaseName) {
+            ArrayList<String> log = new ArrayList<>();
+            log.add(Statement.Type.DROP_DATABASE.toString());
+            log.add(databaseName);
+            logList.add(String.join("|", log));
+        }
+
+        private void addCreateTable(ArrayList<String> logList, String databaseName, String tableName, ArrayList<Column> columnsList) {
+            ArrayList<String> log = new ArrayList<>();
+            log.add(Statement.Type.CREATE_TABLE.toString());
+            log.add(databaseName);
+            log.add(tableName);
+            for (Column column: columnsList) {
+                log.add(column.toString());
+            }
+            logList.add(String.join("|", log));
+        }
+
+        private void addDropTable(ArrayList<String> logList, String databaseName, String tableName) {
+            ArrayList<String> log = new ArrayList<>();
+            log.add(Statement.Type.DROP_TABLE.toString());
+            log.add(databaseName);
+            log.add(tableName);
+            logList.add(String.join("|", log));
+        }
+
+        private void addInsert(ArrayList<String> logList, String databaseName, String tableName, Row row) {
+            ArrayList<String> log = new ArrayList<>();
+            log.add(Statement.Type.INSERT.toString());
+            log.add(databaseName);
+            log.add(tableName);
+            log.add(row.toString());
+            logList.add(String.join("|", log));
+        }
+
+        private void addDelete(ArrayList<String> logList, String databaseName, String tableName, ArrayList<Row> row2Delete) {
+            ArrayList<String> log = new ArrayList<>();
+            log.add(Statement.Type.DELETE.toString());
+            log.add(databaseName);
+            log.add(tableName);
+            for (Row row: row2Delete) {
+                log.add(row.toString());
+            }
+            logList.add(String.join("|", log));
+        }
+
+        private void addDelete(ArrayList<String> logList, String databaseName, String tableName, Row row) {
+            ArrayList<String> log = new ArrayList<>();
+            log.add(Statement.Type.DELETE.toString());
+            log.add(databaseName);
+            log.add(tableName);
+            log.add(row.toString());
+            logList.add(String.join("|", log));
+        }
+
+        private void addUpdate(ArrayList<String> logList, String databaseName, String tableName, ArrayList<Row> rowUpdated) {
+            ArrayList<String> log = new ArrayList<>();
+            log.add(Statement.Type.DELETE.toString());
+            log.add(databaseName);
+            log.add(tableName);
+            for (Row row: rowUpdated) {
+                log.add(row.toString());
+            }
+            logList.add(String.join("|", log));
+        }
+
+        private void commitLog(ArrayList<String> logList) {
+            try {
+                lock.writeLock().lock();
+                File file = new File(Global.DATABASE_DIR+File.separator+"log");
+                FileWriter fileWriter = new FileWriter(file, true);
+                for (String string: logList) {
+                    fileWriter.write(string+'\n');
+                }
+                fileWriter.flush();
+                fileWriter.close();
+            }
+            catch (IOException ignored) {
+                throw new WriteLogException();
+            }
+            finally {
+                lock.writeLock().unlock();
             }
         }
     }

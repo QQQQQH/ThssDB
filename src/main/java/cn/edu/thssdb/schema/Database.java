@@ -11,8 +11,7 @@ import java.util.HashMap;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 public class Database {
-
-    private String name;
+    String name;
     private HashMap<String, Table> tables;
     private ReentrantReadWriteLock lock;
 
