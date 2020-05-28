@@ -27,4 +27,6 @@ public class Global {
     public static final String PASSWORD = "";
 
     public static final String DATABASE_DIR = "db";
+
+    public static final int FLUSH_THRESHOLED = 5;
 }

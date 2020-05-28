@@ -63,10 +63,10 @@ public class Table implements Iterable<Row> {
         }
     }
 
-    void persist() {
+    boolean persist() {
         try {
             lock.writeLock().lock();
-            serialize();
+            return serialize();
         }
         finally {
             lock.writeLock().unlock();
@@ -87,7 +87,7 @@ public class Table implements Iterable<Row> {
     void insert(Row row) throws DuplicateKeyException {
         // TODO
         try {
-//            lock.writeLock().lock();
+            lock.writeLock().lock();
             Entry primary = row.getEntries().get(primaryIndex);
             if (checkRowExist(primary)) {
                 throw new DuplicateKeyException();
@@ -95,14 +95,14 @@ public class Table implements Iterable<Row> {
             index.put(primary, row);
         }
         finally {
-//            lock.writeLock().unlock();
+            lock.writeLock().unlock();
         }
     }
 
     void delete(Row row) {
         // TODO
         try {
-//            lock.writeLock().lock();
+            lock.writeLock().lock();
             Entry primary = row.getEntries().get(primaryIndex);
             if (!checkRowExist(primary)) {
                 throw new KeyNotExistException();
@@ -110,53 +110,53 @@ public class Table implements Iterable<Row> {
             index.remove(primary);
         }
         finally {
-//            lock.writeLock().unlock();
+            lock.writeLock().unlock();
         }
     }
 
     void update(Row row) {
         // TODO
         try {
-//            lock.writeLock().lock();
+            lock.writeLock().lock();
             Entry entry = row.getEntries().get(primaryIndex);
             if (!index.contains(entry))
                 throw new KeyNotExistException();
             index.update(entry, row);
         }
         finally {
-//            lock.writeLock().unlock();
+            lock.writeLock().unlock();
         }
     }
 
-    private void serialize() {
+    private boolean serialize() {
         // TODO
-        File dir = new File(Global.DATABASE_DIR+File.separator+databaseName+File.separator+"data");
-        if (!dir.exists() && !dir.mkdirs()) {
-            System.err.print("Fail to serialize due to mkdirs error!");
-            return;
-        }
         try {
-            lock.writeLock().lock();
+            File dir = new File(Global.DATABASE_DIR+File.separator+databaseName+File.separator+"data");
+            if (!dir.exists() && !dir.mkdirs()) {
+                System.err.print("Fail to serialize due to mkdirs error!");
+                return false;
+            }
             ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(dir.toString()+File.separator+tableName));
             for (Row row : this) {
                 oos.writeObject(row);
             }
             oos.close();
+            return true;
         }
         catch (IOException e) {
-            e.printStackTrace();
             System.err.print("Fail to serialize due to IOException!");
+            return false;
         }
     }
 
     private ArrayList<Row> deserialize() {
         // TODO
-        File file = new File(Global.DATABASE_DIR+File.separator+databaseName+File.separator+"data"+File.separator+tableName);
-        if (!file.exists()) {
-            return new ArrayList<>();
-        }
-        ArrayList<Row> rows = new ArrayList<>();
         try {
+            File file = new File(Global.DATABASE_DIR+File.separator+databaseName+File.separator+"data"+File.separator+tableName);
+            if (!file.exists()) {
+                return new ArrayList<>();
+            }
+            ArrayList<Row> rows = new ArrayList<>();
             FileInputStream fis = new FileInputStream(file);
             ObjectInputStream ois = new ObjectInputStream(fis);
             while (fis.available() > 0) {
@@ -164,16 +164,16 @@ public class Table implements Iterable<Row> {
             }
             ois.close();
             fis.close();
+            return rows;
         }
         catch (IOException e) {
-            e.printStackTrace();
             System.err.println("Fail to deserialize due to IOException!");
+            return new ArrayList<>();
         }
         catch (ClassNotFoundException e) {
-            e.printStackTrace();
             System.err.println("Fail to deserialize due to ClassNotFoundException!");
+            return new ArrayList<>();
         }
-        return rows;
     }
 
     public void readLock() {
