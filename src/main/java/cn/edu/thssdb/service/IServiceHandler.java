@@ -48,7 +48,6 @@ public class IServiceHandler implements IService.Iface {
         ThssDB thssDB = ThssDB.getInstance();
         ExecuteStatementResp resp = new ExecuteStatementResp();
         SQLExecuteResult result = thssDB.execute(req.getStatement(), req.sessionId);
-        System.out.println("msg:"+result.getMessage());
         resp.setMsg(result.getMessage());
         resp.setStatus(new Status(result.isIsSucceed() ? Global.SUCCESS_CODE : Global.FAILURE_CODE));
         resp.setIsAbort(result.isIsAbort());

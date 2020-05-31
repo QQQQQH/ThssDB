@@ -401,7 +401,6 @@ public class Manager {
         private ArrayList<SQLExecuteResult> executeSQL(List<Statement> statementList, Session session) {
             ArrayList<SQLExecuteResult> resultList = new ArrayList<>();
             for (Statement statement: statementList) {
-                System.out.println(statement.get_type());
                 switch (statement.get_type()) {
                     case CREATE_DATABASE:
                         resultList.add(createDatabase((CreatDatabaseStatement)statement, session));
@@ -776,8 +775,6 @@ public class Manager {
                 QueryResult queryResult = new QueryResult(tables2Query);
 
                 queryResult.selectQuery(statement);
-                System.out.println(queryResult.getAttrList());
-                System.out.println(queryResult.getResultRowList());
                 return new SQLExecuteResult(
                         "Query succeeds.",
                         queryResult.getAttrList(),
