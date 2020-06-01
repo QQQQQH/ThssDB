@@ -7,6 +7,7 @@ import cn.edu.thssdb.utils.Global;
 import cn.edu.thssdb.schema.Manager.SQLExecutor.SQLExecuteResult;
 import org.apache.thrift.server.TServer;
 import org.apache.thrift.server.TSimpleServer;
+import org.apache.thrift.server.TThreadPoolServer;
 import org.apache.thrift.transport.TServerSocket;
 import org.apache.thrift.transport.TTransportException;
 import org.slf4j.Logger;
@@ -27,7 +28,6 @@ public class ThssDB {
     private static Manager manager;
 
     private static long sessionCnt;
-    private static List<Long> sessionList;
 
     public static ThssDB getInstance() {
         return ThssDBHolder.INSTANCE;
@@ -35,7 +35,6 @@ public class ThssDB {
 
     public static void main(String[] args) {
         sessionCnt = 0;
-        sessionList = new ArrayList<>();
         manager = Manager.getInstance();
         ThssDB server = ThssDB.getInstance();
         server.start();
@@ -51,7 +50,10 @@ public class ThssDB {
     private static void setUp(IService.Processor processor) {
         try {
             transport = new TServerSocket(Global.DEFAULT_SERVER_PORT);
-            server = new TSimpleServer(new TServer.Args(transport).processor(processor));
+//            server = new TSimpleServer(new TServer.Args(transport).processor(processor));
+
+            server = new TThreadPoolServer(new TThreadPoolServer.Args(transport).processor(processor));
+
             logger.info("Starting ThssDB ...");
             server.serve();
         } catch (TTransportException e) {
@@ -61,22 +63,29 @@ public class ThssDB {
 
     public long setupSession() {
         long sessionId = sessionCnt++;
-        sessionList.add(sessionId);
+        manager.addSession(sessionId);
         return sessionId;
     }
 
     public void clearSession(long sessionId) {
-        manager.quit();
-        sessionList.remove(sessionId);
+        manager.deleteSession(sessionId);
     }
 
-    public boolean checkSession(long sessionId) {
-        return sessionList.contains(sessionId);
-    }
-
-    public SQLExecuteResult execute(String sql) {
-        List<SQLExecuteResult> resultList = manager.execute(sql);
+    public SQLExecuteResult execute(String sql, long sessionId) {
+        List<SQLExecuteResult> resultList = manager.execute(sql, sessionId);
         return resultList.get(0);
+    }
+
+    public int setAutoCommit(boolean autoCommit, long sessionId) {
+        return manager.setAutoCommit(autoCommit, sessionId);
+    }
+
+    public int beginTransaction(long sessionId) {
+        return manager.beginTransaction(sessionId);
+    }
+
+    public int commit(long sessionId) {
+        return manager.commit(sessionId);
     }
 
     private static class ThssDBHolder {

@@ -308,7 +308,9 @@ public class QueryResult {
         if ((resultLeft instanceof String) ^ (resultRight instanceof String)) {
             throw new OperandTypeNotMatchedException();
         }
-        int compareResult = resultLeft.toString().compareTo(resultRight.toString());
+        int compareResult = resultLeft instanceof String ?
+                resultLeft.toString().compareTo(resultRight.toString()) :
+                Double.valueOf(resultLeft.toString()).compareTo(Double.valueOf(resultRight.toString()));
         switch (op) {
             case "=": return compareResult == 0;
             case "<>": return compareResult != 0;

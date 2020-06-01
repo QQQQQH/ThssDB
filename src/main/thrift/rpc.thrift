@@ -36,7 +36,7 @@ struct ExecuteStatementReq {
   2: required string statement
 }
 
-struct ExecuteStatementResp{
+struct ExecuteStatementResp {
   1: required Status status
   2: required bool isAbort
   3: required bool hasResult
@@ -46,9 +46,40 @@ struct ExecuteStatementResp{
   6: required string msg;
 }
 
+struct SetAutoCommitReq {
+  1: required i64 sessionId
+  2: required bool autoCommit
+}
+
+struct SetAutoCommitResp {
+  1: required Status status
+  2: required string msg
+}
+
+struct BeginTransactionReq {
+  1: required i64 sessionId
+}
+
+struct BeginTransactionResp {
+  1: required Status status
+  2: required string msg
+}
+
+struct CommitReq {
+  1: required i64 sessionId
+}
+
+struct CommitResp {
+  1: required Status status
+  2: required string msg
+}
+
 service IService {
   GetTimeResp getTime(1: GetTimeReq req);
   ConnectResp connect(1: ConnectReq req);
   DisconnetResp disconnect(1: DisconnetReq req);
   ExecuteStatementResp executeStatement(1: ExecuteStatementReq req);
+  SetAutoCommitResp setAutoCommit(1: SetAutoCommitReq req);
+  BeginTransactionResp beginTransaction(1: BeginTransactionReq req);
+  CommitResp commit(1: CommitReq req);
 }

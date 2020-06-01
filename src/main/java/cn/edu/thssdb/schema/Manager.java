@@ -22,10 +22,11 @@ import java.util.List;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 public class Manager {
-    private HashMap<String, Database> databases;
-    private String currentDatabase;
+    private static HashMap<String, Database> databases;
     private static SQLExecutor sqlExecutor;
+    private static Logger logger;
     private static ReentrantReadWriteLock lock;
+    private static ArrayList<Session> sessionList;
 
     public static Manager getInstance() {
         return Manager.ManagerHolder.INSTANCE;
@@ -34,46 +35,133 @@ public class Manager {
     private Manager() {
         // TODO
         databases = new HashMap<>();
-        currentDatabase = null;
         lock = new ReentrantReadWriteLock();
+        logger = new Logger();
         sqlExecutor = new SQLExecutor();
+        sessionList = new ArrayList<>();
         recover();
+        logger.redoLog();
     }
 
-    private void persist() {
-        File dir = new File(Global.DATABASE_DIR);
-        if (!dir.exists() && !dir.mkdirs()) {
-            System.err.println("Fail to persist manager due to mkdirs error!");
-            return;
+    public static void addSession(long sessionId) {
+        sessionList.add(new Session(sessionId));
+    }
+
+    public static void deleteSession(long sessionId) {
+        for (Session session: sessionList) {
+            if (session.sessionId == sessionId) {
+                for (ReentrantReadWriteLock lock: session.lockList) {
+                    lock.writeLock().unlock();
+                }
+                sessionList.remove(session);
+                break;
+            }
         }
+    }
+
+    private static Session getSession(long sessionId) {
+        for (Session session: sessionList) {
+            if (session.sessionId == sessionId) {
+                return session;
+            }
+        }
+        return null;
+    }
+
+    public static int setAutoCommit(boolean autoCommit, long sessionId) {
+        Session session = getSession(sessionId);
+        if (session == null) {
+            return 0;
+        }
+        else {
+            if (session.inTransaction) {
+                return 2;
+            }
+            session.autoCommit = autoCommit;
+            return 1;
+        }
+    }
+
+    public static int beginTransaction(long sessionId) {
+        Session session = getSession(sessionId);
+        if (session == null) {
+            return 0;
+        }
+        else {
+            if (session.inTransaction) {
+                return 2;
+            }
+            session.inTransaction = true;
+            return 1;
+        }
+    }
+
+    public static int commit(long sessionId) {
+        Session session = getSession(sessionId);
+        if (session == null) {
+            return 0;
+        }
+        else {
+            for (ReentrantReadWriteLock lock: session.lockList) {
+                lock.writeLock().unlock();
+            }
+            session.lockList.clear();
+            logger.commitLog(session.logList);
+            session.logList.clear();
+            session.inTransaction = false;
+            return 1;
+        }
+    }
+
+    private static boolean persist() {
         try {
-            lock.writeLock().lock();
+            lockAll();
+            File dir = new File(Global.DATABASE_DIR);
+            if (dir.exists()) {
+                Path databaseDirector = Paths.get(dir.toString());
+                Files.walkFileTree(databaseDirector, new SimpleFileVisitor<Path>() {
+                    @Override
+                    public FileVisitResult visitFile(Path file, BasicFileAttributes attributes) throws IOException {
+                        Files.delete(file);
+                        return FileVisitResult.CONTINUE;
+                    }
+
+                    @Override
+                    public FileVisitResult postVisitDirectory(Path dir, IOException exc) throws IOException {
+                        Files.delete(dir);
+                        return FileVisitResult.CONTINUE;
+                    }
+                });
+            }
+            if (!dir.mkdirs()) {
+                System.err.println("Fail to persist due to mkdirs error!");
+                return false;
+            }
             ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(dir.toString()+File.separator+"DATABASES_NAME"));
             for (String databaseName: databases.keySet()) {
                 oos.writeObject(databaseName);
             }
-            if (currentDatabase != null) {
-                Database database = databases.get(currentDatabase);
-                if (database == null) {
-                    System.err.println("Current database is null while trying to persist!");
-                }
-                else {
-                    database.quit();
+            for (Database database: databases.values()) {
+                if (!database.persist()) {
+                    return false;
                 }
             }
+            return true;
         }
         catch (FileNotFoundException e) {
             System.err.print("Fail to persist manager due to FileNotFoundException!");
+            return false;
         }
         catch (IOException e) {
             System.err.print("Fail to persist manager due to IOException!");
+            return false;
         }
         finally {
             lock.writeLock().unlock();
         }
     }
 
-    private void recover() {
+    private static void recover() {
         File file = new File(Global.DATABASE_DIR+File.separator+"DATABASES_NAME");
         if (!file.exists()) return;
         try {
@@ -99,106 +187,114 @@ public class Manager {
         }
     }
 
-    private void createDatabaseIfNotExists(String name) throws DatabaseAlreadyExistException {
-        // TODO
-        try {
-            lock.writeLock().lock();
-            if (databases.get(name) != null) {
-                throw new DatabaseAlreadyExistException();
+    private static boolean notOwnLock(ArrayList<ReentrantReadWriteLock> lockList, ReentrantReadWriteLock lock) {
+        return !lockList.contains(lock);
+    }
+
+    private static void lockAll() {
+        lock.writeLock().lock();
+        // make sure all the child locks released by other transaction
+        for (Database database: databases.values()) {
+            if (database == null) continue;
+            database.lock.writeLock().lock();
+            for (Table table: database.tables.values()) {
+                if (table == null) continue;
+                table.lock.writeLock().lock();
+                table.lock.writeLock().unlock();
             }
-            Database database = new Database(name);
-            databases.put(name, database);
-        }
-        finally {
-            lock.writeLock().unlock();
+            database.lock.writeLock().unlock();
         }
     }
 
-    private void deleteDatabase(String name) throws DatabaseNotExistException {
+    private static void lockDatabase(Database database) {
+        lock.writeLock().lock();
+        database.lock.writeLock().lock();
+        // make sure the child locks of the database released by other transaction
+        for (Table table: database.tables.values()) {
+            if (table == null) continue;
+            table.lock.writeLock().lock();
+            table.lock.writeLock().unlock();
+        }
+        lock.writeLock().unlock();
+    }
+
+    private static void lockTable(Database database, Table table) {
+        lock.writeLock().lock();
+        database.lock.writeLock().lock();
+        table.lock.writeLock().lock();
+        database.lock.writeLock().unlock();
+        lock.writeLock().unlock();
+    }
+
+    private static void createDatabaseIfNotExists(String name) {
         // TODO
-        try {
-            lock.writeLock().lock();
+        if (databases.get(name) != null) {
+            throw new DatabaseAlreadyExistException();
+        }
+        databases.put(name, new Database(name));
+    }
+
+    private static void deleteDatabase(String name, Session session) {
+        // TODO
+//        try {
             if (databases.get(name) == null) {
                 throw new DatabaseNotExistException();
             }
 
-            if (currentDatabase != null && currentDatabase.equals(name)) {
-                currentDatabase = null;
+            for (Session session_: sessionList) {
+                if (session_ != session && name.equals(session_.currentDatabase)) {
+                    throw new DatabaseIsBeingUsedException();
+                }
+            }
+            if (session != null && name.equals(session.currentDatabase)) {
+                session.currentDatabase = null;
             }
 
             databases.remove(name);
             // remove database file
-            Path databaseDirector = Paths.get(Global.DATABASE_DIR+File.separator+name);
-            Files.walkFileTree(databaseDirector, new SimpleFileVisitor<Path>() {
-                @Override
-                public FileVisitResult visitFile(Path file, BasicFileAttributes attributes) throws IOException {
-                    Files.delete(file);
-                    return FileVisitResult.CONTINUE;
-                }
-
-                @Override
-                public FileVisitResult postVisitDirectory(Path dir, IOException exc) throws IOException {
-                    Files.delete(dir);
-                    return FileVisitResult.CONTINUE;
-                }
-
-            });
-        }
-        catch (IOException e) {
-            System.err.println("Fail to remove database file!");
-            e.printStackTrace();
-        }
-        finally {
-            lock.writeLock().unlock();
-        }
+//            Path databaseDirector = Paths.get(Global.DATABASE_DIR+File.separator+name);
+//            Files.walkFileTree(databaseDirector, new SimpleFileVisitor<Path>() {
+//                @Override
+//                public FileVisitResult visitFile(Path file, BasicFileAttributes attributes) throws IOException {
+//                    Files.delete(file);
+//                    return FileVisitResult.CONTINUE;
+//                }
+//
+//                @Override
+//                public FileVisitResult postVisitDirectory(Path dir, IOException exc) throws IOException {
+//                    Files.delete(dir);
+//                    return FileVisitResult.CONTINUE;
+//                }
+//
+//            });
+//        }
+//        catch (IOException e) {
+//            System.err.println("Fail to remove database file!");
+//        }
     }
 
-    private void switchDatabase(String name) throws DatabaseNotExistException {
+    private static void switchDatabase(String name, Session session) {
         // TODO
-        if (name.equals(currentDatabase)) return;
-        try {
-            lock.writeLock().lock();
-            Database database = databases.get(name);
-            if (database == null) {
-                throw new DatabaseNotExistException();
-            }
+        if (name.equals(session.currentDatabase)) return;
+        Database database = databases.get(name);
+        if (database == null) {
+            throw new DatabaseNotExistException();
+        }
+        if (database.tables.isEmpty()) {
             database.recover();
-            if (currentDatabase != null) {
-                Database current = databases.get(currentDatabase);
-                if (current == null) {
-                    System.err.println("Current database is null while trying to persist!");
-                }
-                else {
-                    current.quit();
-                }
-            }
-            currentDatabase = name;
         }
-        finally {
-            lock.writeLock().unlock();
-        }
-    }
-
-    public void quit() {
-        persist();
-        try {
-            lock.writeLock().lock();
-            currentDatabase = null;
-        }
-        finally {
-            lock.writeLock().unlock();
-        }
+        session.currentDatabase = name;
 
     }
 
-    private Database getDatabase() throws DatabaseNotSelectException {
+    private static Database getDatabase(Session session) {
         try {
             lock.readLock().lock();
-            if (currentDatabase == null) {
+            if (session.currentDatabase == null) {
                 throw new DatabaseNotSelectException();
             }
             else {
-                return databases.get(currentDatabase);
+                return databases.get(session.currentDatabase);
             }
         }
         finally {
@@ -206,7 +302,27 @@ public class Manager {
         }
     }
 
-    public List<SQLExecutor.SQLExecuteResult> execute(String sql) {
+    private static Database getDatabase(String name) {
+        try {
+            lock.readLock().lock();
+            Database database = databases.get(name);
+            if (database == null) {
+                throw new DatabaseNotExistException();
+            }
+            return database;
+        }
+        finally {
+            lock.readLock().unlock();
+        }
+    }
+
+    public static List<SQLExecutor.SQLExecuteResult> execute(String sql, long sessionId) {
+        Session session = getSession(sessionId);
+        if (session == null) {
+            List<SQLExecutor.SQLExecuteResult> resultList = new ArrayList<>();
+            resultList.add(new SQLExecutor.SQLExecuteResult("Invalid session!", false, false));
+            return resultList;
+        }
         List<Statement> statementList = sqlExecutor.parseSQL(sql);
         if (statementList == null || statementList.size() == 0) {
             List<SQLExecutor.SQLExecuteResult> resultList = new ArrayList<>();
@@ -214,7 +330,7 @@ public class Manager {
             return resultList;
         }
         else {
-            return sqlExecutor.executeSQL(statementList);
+            return sqlExecutor.executeSQL(statementList, session);
         }
     }
 
@@ -282,37 +398,36 @@ public class Manager {
 
         }
 
-        private ArrayList<SQLExecuteResult> executeSQL(List<Statement> statementList) {
+        private ArrayList<SQLExecuteResult> executeSQL(List<Statement> statementList, Session session) {
             ArrayList<SQLExecuteResult> resultList = new ArrayList<>();
             for (Statement statement: statementList) {
-                System.out.println(statement.get_type());
                 switch (statement.get_type()) {
                     case CREATE_DATABASE:
-                        resultList.add(createDatabase((CreatDatabaseStatement)statement));
+                        resultList.add(createDatabase((CreatDatabaseStatement)statement, session));
                         break;
                     case DROP_DATABASE:
-                        resultList.add(dropDatabase((DropDatabaseStatement)statement));
+                        resultList.add(dropDatabase((DropDatabaseStatement)statement, session));
                         break;
                     case USE:
-                        resultList.add(useDatabase((UseDatabaseStatement)statement));
+                        resultList.add(useDatabase((UseDatabaseStatement)statement, session));
                         break;
                     case CREATE_TABLE:
-                        resultList.add(createTable((CreateTableStatement)statement));
+                        resultList.add(createTable((CreateTableStatement)statement, session));
                         break;
                     case DROP_TABLE:
-                        resultList.add(dropTable((DropTableStatement)statement));
+                        resultList.add(dropTable((DropTableStatement)statement, session));
                         break;
                     case INSERT:
-                        resultList.add(insert((InsertStatement)statement));
+                        resultList.add(insert((InsertStatement)statement, session));
                         break;
                     case SELECT:
-                        resultList.add(select((SelectStatement)statement));
+                        resultList.add(select((SelectStatement)statement, session));
                         break;
                     case DELETE:
-                        resultList.add(delete((DeleteStatement)statement));
+                        resultList.add(delete((DeleteStatement)statement, session));
                         break;
                     case UPDATE:
-                        resultList.add(update((UpdateStatement)statement));
+                        resultList.add(update((UpdateStatement)statement, session));
                         break;
                     default:
                         resultList.add(new SQLExecuteResult("Error: SQL syntax not supported!", false, false));
@@ -322,9 +437,26 @@ public class Manager {
             return resultList;
         }
 
-        private SQLExecuteResult createDatabase(CreatDatabaseStatement statement) {
+        private SQLExecuteResult createDatabase(CreatDatabaseStatement statement, Session session) {
             try {
-                Manager.getInstance().createDatabaseIfNotExists(statement.databaseName);
+                session.inTransaction = true;
+                if (notOwnLock(session.lockList, lock)) {
+                    lockAll();
+                    session.lockList.add(lock);
+                }
+
+                createDatabaseIfNotExists(statement.databaseName);
+
+                logger.addCreateDatabase(session.logList, statement.databaseName);
+
+                if (session.autoCommit) {
+                    session.lockList.remove(lock);
+                    lock.writeLock().unlock();
+                    logger.commitLog(session.logList);
+                    session.logList.clear();
+                    session.inTransaction = false;
+                }
+
                 return new SQLExecuteResult("Create database succeeds.", true, false);
             }
             catch (Exception e) {
@@ -332,9 +464,26 @@ public class Manager {
             }
         }
 
-        private SQLExecuteResult dropDatabase(DropDatabaseStatement statement) {
+        private SQLExecuteResult dropDatabase(DropDatabaseStatement statement, Session session) {
             try {
-                Manager.getInstance().deleteDatabase(statement.databaseName);
+                session.inTransaction = true;
+                if (notOwnLock(session.lockList, lock)) {
+                    lockAll();
+                    session.lockList.add(lock);
+                }
+
+                deleteDatabase(statement.databaseName, session);
+
+                logger.addDropDatabase(session.logList, statement.databaseName);
+
+                if (session.autoCommit) {
+                    session.lockList.remove(lock);
+                    lock.writeLock().unlock();
+                    logger.commitLog(session.logList);
+                    session.logList.clear();
+                    session.inTransaction = false;
+                }
+
                 return new SQLExecuteResult("Drop database succeeds.", true, false);
             }
             catch (Exception e) {
@@ -342,9 +491,9 @@ public class Manager {
             }
         }
 
-        private SQLExecuteResult useDatabase(UseDatabaseStatement statement) {
+        private SQLExecuteResult useDatabase(UseDatabaseStatement statement, Session session) {
             try {
-                Manager.getInstance().switchDatabase(statement.databaseName);
+                switchDatabase(statement.databaseName, session);
                 return new SQLExecuteResult("Database switch to "+statement.databaseName+".", true, false);
             }
             catch (Exception e) {
@@ -352,12 +501,19 @@ public class Manager {
             }
         }
 
-        private SQLExecuteResult createTable(CreateTableStatement statement) {
+        private SQLExecuteResult createTable(CreateTableStatement statement, Session session) {
             try {
-                Database database = Manager.getInstance().getDatabase();
+                Database database = getDatabase(session);
                 if (database.checkTableExist(statement.tableName)) {
                     throw new TableAlreadyExistException();
                 }
+
+                session.inTransaction = true;
+                if (notOwnLock(session.lockList, database.lock)) {
+                    lockDatabase(database);
+                    session.lockList.add(database.lock);
+                }
+
                 ArrayList<Column> columnsList = new ArrayList<>();
                 for (ColumnDef columnDef: statement.columnDefList) {
                     columnsList.add(new Column(columnDef.columnName, // name
@@ -387,6 +543,17 @@ public class Manager {
                     }
                 }
                 database.create(statement.tableName, columnsList);
+
+                logger.addCreateTable(session.logList, database.name, statement.tableName, columnsList);
+
+                if (session.autoCommit) {
+                    session.lockList.remove(database.lock);
+                    database.lock.writeLock().unlock();
+                    logger.commitLog(session.logList);
+                    session.logList.clear();
+                    session.inTransaction = false;
+                }
+
                 return new SQLExecuteResult("Create table succeeds.", true, false);
             }
             catch (Exception e) {
@@ -394,10 +561,31 @@ public class Manager {
             }
         }
 
-        private SQLExecuteResult dropTable(DropTableStatement statement) {
+        private SQLExecuteResult dropTable(DropTableStatement statement, Session session) {
             try {
-                Database database = Manager.getInstance().getDatabase();
+                Database database = getDatabase(session);
+                if (!database.checkTableExist(statement.tableName)) {
+                    throw new TableNotExistException();
+                }
+
+                session.inTransaction = true;
+                if (notOwnLock(session.lockList, database.lock)) {
+                    lockDatabase(database);
+                    session.lockList.add(database.lock);
+                }
+
                 database.drop(statement.tableName);
+
+                logger.addDropTable(session.logList, database.name, statement.tableName);
+
+                if (session.autoCommit) {
+                    session.lockList.remove(database.lock);
+                    database.lock.writeLock().unlock();
+                    logger.commitLog(session.logList);
+                    session.logList.clear();
+                    session.inTransaction = false;
+                }
+
                 return new SQLExecuteResult("Drop table succeeds.", true, false);
             }
             catch (Exception e) {
@@ -405,10 +593,17 @@ public class Manager {
             }
         }
 
-        private SQLExecuteResult insert(InsertStatement statement) {
+        private SQLExecuteResult insert(InsertStatement statement, Session session) {
             try {
-                Database database = Manager.getInstance().getDatabase();
+                Database database = getDatabase(session);
                 Table table = database.getTable(statement.tableName);
+
+                session.inTransaction = true;
+                if (notOwnLock(session.lockList, table.lock)) {
+                    lockTable(database, table);
+                    session.lockList.add(table.lock);
+                }
+
                 if (statement.columnNameList.size()
                         != statement.valueList.size()) {
                     throw new ColumnValueSizeNotMatchedException();
@@ -451,7 +646,19 @@ public class Manager {
                         throw new ColumnDoesNotExistException();
                     }
                 }
-                table.insert(new Row(entryList));
+                Row row = new Row(entryList);
+                table.insert(row);
+
+                logger.addInsert(session.logList, database.name, statement.tableName, row);
+
+                if (session.autoCommit) {
+                    session.lockList.remove(table.lock);
+                    table.lock.writeLock().unlock();
+                    logger.commitLog(session.logList);
+                    session.logList.clear();
+                    session.inTransaction = false;
+                }
+
                 return new SQLExecuteResult("Insert operation succeeds.", true, false);
             }
             catch (Exception e) {
@@ -459,15 +666,33 @@ public class Manager {
             }
         }
 
-        private SQLExecuteResult delete(DeleteStatement statement) {
+        private SQLExecuteResult delete(DeleteStatement statement, Session session) {
             try {
-                Database database = Manager.getInstance().getDatabase();
+                Database database = getDatabase(session);
                 Table table = database.getTable(statement.tableName);
+
+                session.inTransaction = true;
+                if (notOwnLock(session.lockList, table.lock)) {
+                    lockTable(database, table);
+                    session.lockList.add(table.lock);
+                }
+
                 QueryResult queryResult = new QueryResult(table);
                 ArrayList<Row> row2Delete = queryResult.deleteQuery(statement);
                 for (Row row: row2Delete) {
                     table.delete(row);
                 }
+
+                logger.addDelete(session.logList, database.name, statement.tableName, row2Delete);
+
+                if (session.autoCommit) {
+                    session.lockList.remove(table.lock);
+                    table.lock.writeLock().unlock();
+                    logger.commitLog(session.logList);
+                    session.logList.clear();
+                    session.inTransaction = false;
+                }
+
                 return new SQLExecuteResult("Delete operation succeeds.", true, false);
             }
             catch (Exception e) {
@@ -475,10 +700,17 @@ public class Manager {
             }
         }
 
-        private SQLExecuteResult update(UpdateStatement statement) {
+        private SQLExecuteResult update(UpdateStatement statement, Session session) {
             try {
-                Database database = Manager.getInstance().getDatabase();
+                Database database = getDatabase(session);
                 Table table = database.getTable(statement.tableName);
+
+                session.inTransaction = true;
+                if (notOwnLock(session.lockList, table.lock)) {
+                    lockTable(database, table);
+                    session.lockList.add(table.lock);
+                }
+
                 QueryResult queryResult = new QueryResult(table);
                 ArrayList<Row> row2Update = queryResult.updateQuery(statement);
                 if (row2Update.size() == 0) {
@@ -497,8 +729,15 @@ public class Manager {
                         throw new DuplicateKeyException();
                     }
                     else {
-                        table.delete(row2Update.get(0));
-                        table.insert(rowUpdated.get(0));
+                        Row rowBefore = row2Update.get(0);
+                        table.delete(rowBefore);
+
+                        logger.addDelete(session.logList, database.name, statement.tableName, rowBefore);
+
+                        Row rowAfter = rowUpdated.get(0);
+                        table.insert(rowAfter);
+
+                        logger.addInsert(session.logList, database.name, statement.tableName, rowAfter);
                     }
                 }
                 else {
@@ -506,7 +745,18 @@ public class Manager {
                     for (Row row: rowUpdated) {
                         table.update(row);
                     }
+
+                    logger.addUpdate(session.logList, database.name, statement.tableName, rowUpdated);
                 }
+
+                if (session.autoCommit) {
+                    session.lockList.remove(table.lock);
+                    table.lock.writeLock().unlock();
+                    logger.commitLog(session.logList);
+                    session.logList.clear();
+                    session.inTransaction = false;
+                }
+
                 return new SQLExecuteResult("Update operation succeeds.", true, false);
             }
             catch (Exception e) {
@@ -514,9 +764,9 @@ public class Manager {
             }
         }
 
-        private SQLExecuteResult select(SelectStatement statement) {
+        private SQLExecuteResult select(SelectStatement statement, Session session) {
             try {
-                Database database = Manager.getInstance().getDatabase();
+                Database database = getDatabase(session);
                 ArrayList<Table> tables2Query = new ArrayList<>();
                 tables2Query.add(database.getTable(statement.tableQuery.tableNameLeft));
                 if (statement.tableQuery.tableNameRight != null) {
@@ -525,8 +775,6 @@ public class Manager {
                 QueryResult queryResult = new QueryResult(tables2Query);
 
                 queryResult.selectQuery(statement);
-                System.out.println(queryResult.getAttrList());
-                System.out.println(queryResult.getResultRowList());
                 return new SQLExecuteResult(
                         "Query succeeds.",
                         queryResult.getAttrList(),
@@ -537,5 +785,267 @@ public class Manager {
                 return new SQLExecuteResult(e.getMessage(), false, false);
             }
         }
+    }
+
+    private static class Logger {
+        private ReentrantReadWriteLock lock;
+        private int logCnt;
+
+        private Logger() {
+            lock = new ReentrantReadWriteLock();
+            logCnt = 0;
+        }
+
+        private void addCreateDatabase(ArrayList<String> logList, String databaseName) {
+            ArrayList<String> log = new ArrayList<>();
+            log.add(Statement.Type.CREATE_DATABASE.toString());
+            log.add(databaseName);
+            logList.add(String.join("|", log));
+        }
+
+        private void addDropDatabase(ArrayList<String> logList, String databaseName) {
+            ArrayList<String> log = new ArrayList<>();
+            log.add(Statement.Type.DROP_DATABASE.toString());
+            log.add(databaseName);
+            logList.add(String.join("|", log));
+        }
+
+        private void addCreateTable(ArrayList<String> logList, String databaseName, String tableName, ArrayList<Column> columnsList) {
+            ArrayList<String> log = new ArrayList<>();
+            log.add(Statement.Type.CREATE_TABLE.toString());
+            log.add(databaseName);
+            log.add(tableName);
+            for (Column column: columnsList) {
+                log.add(column.toString());
+            }
+            logList.add(String.join("|", log));
+        }
+
+        private void addDropTable(ArrayList<String> logList, String databaseName, String tableName) {
+            ArrayList<String> log = new ArrayList<>();
+            log.add(Statement.Type.DROP_TABLE.toString());
+            log.add(databaseName);
+            log.add(tableName);
+            logList.add(String.join("|", log));
+        }
+
+        private void addInsert(ArrayList<String> logList, String databaseName, String tableName, Row row) {
+            ArrayList<String> log = new ArrayList<>();
+            log.add(Statement.Type.INSERT.toString());
+            log.add(databaseName);
+            log.add(tableName);
+            log.add(row.toString());
+            logList.add(String.join("|", log));
+        }
+
+        private void addDelete(ArrayList<String> logList, String databaseName, String tableName, ArrayList<Row> row2Delete) {
+            if (row2Delete.size() == 0) {
+                return;
+            }
+            ArrayList<String> log = new ArrayList<>();
+            log.add(Statement.Type.DELETE.toString());
+            log.add(databaseName);
+            log.add(tableName);
+            for (Row row: row2Delete) {
+                log.add(row.toString());
+            }
+            logList.add(String.join("|", log));
+        }
+
+        private void addDelete(ArrayList<String> logList, String databaseName, String tableName, Row row) {
+            ArrayList<String> log = new ArrayList<>();
+            log.add(Statement.Type.DELETE.toString());
+            log.add(databaseName);
+            log.add(tableName);
+            log.add(row.toString());
+            logList.add(String.join("|", log));
+        }
+
+        private void addUpdate(ArrayList<String> logList, String databaseName, String tableName, ArrayList<Row> rowUpdated) {
+            if (rowUpdated.size() == 0) {
+                return;
+            }
+            ArrayList<String> log = new ArrayList<>();
+            log.add(Statement.Type.UPDATE.toString());
+            log.add(databaseName);
+            log.add(tableName);
+            for (Row row: rowUpdated) {
+                log.add(row.toString());
+            }
+            logList.add(String.join("|", log));
+        }
+
+        private void commitLog(ArrayList<String> logList) {
+            try {
+                lock.writeLock().lock();
+                File dir = new File(Global.DATABASE_DIR);
+                if (!dir.exists() && !dir.mkdirs()) {
+                    System.err.println("Fail to write log due to mkdirs error!");
+                    return;
+                }
+                FileWriter fileWriter = new FileWriter(dir.toString()+File.separator+"log", true);
+                for (String string: logList) {
+                    fileWriter.write(string+'\n');
+                    logCnt++;
+                }
+                fileWriter.flush();
+                fileWriter.close();
+                System.out.println(logCnt);
+                if (logCnt >= Global.FLUSH_THRESHOLED && persist()) {
+                    logCnt = 0;
+                    File logFile = new File(Global.DATABASE_DIR+File.separator+"log");
+                    if (logFile.exists()) {
+                        logFile.delete();
+                    }
+                }
+            }
+            catch (IOException ignored) {
+                throw new WriteLogException();
+            }
+            finally {
+                lock.writeLock().unlock();
+            }
+        }
+
+        private void redoLog() {
+            try {
+                lock.writeLock().lock();
+                File file = new File(Global.DATABASE_DIR+File.separator+"log");
+                if (!file.exists()) {
+                    return;
+                }
+                BufferedReader reader = new BufferedReader(new FileReader(file));
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    logCnt++;
+                    String[] log = line.split("\\|");
+                    switch(Statement.Type.valueOf(log[0])) {
+                        case CREATE_DATABASE:
+                            redoCreateDatabase(log);
+                            break;
+                        case DROP_DATABASE:
+                            redoDropDatabase(log);
+                            break;
+                        case CREATE_TABLE:
+                            redoCreateTable(log);
+                            break;
+                        case DROP_TABLE:
+                            redoDropTable(log);
+                            break;
+                        case INSERT:
+                            redoInsert(log);
+                            break;
+                        case DELETE:
+                            redoDelete(log);
+                            break;
+                        case UPDATE:
+                            redoUpdate(log);
+                            break;
+                        default:
+                            System.err.println("Error: unknown log type!");
+                            break;
+                    }
+                }
+            }
+            catch (IOException ignored) {}
+            finally {
+                lock.writeLock().unlock();
+            }
+        }
+
+        private void redoCreateDatabase(String[] log) {
+            try {
+                Manager.createDatabaseIfNotExists(log[1]);
+            }
+            catch (Exception e) {
+                System.err.println(e.getMessage());
+            }
+        }
+
+        private void redoDropDatabase(String[] log) {
+            try {
+                Manager.deleteDatabase(log[1], null);
+            }
+            catch (Exception e) {
+                System.err.println(e.getMessage());
+            }
+        }
+
+        private void redoCreateTable(String[] log) {
+            try {
+                Database database = Manager.getDatabase(log[1]);
+                ArrayList<Column> columnsList = new ArrayList<>();
+                for (int i = 3;i < log.length;i++) {
+                    columnsList.add(Column.parseColumnDef(log[i]));
+                }
+                database.create(log[2], columnsList);
+            }
+            catch (Exception e) {
+                System.err.println(e.getMessage());
+            }
+        }
+
+        private void redoDropTable(String[] log) {
+            try {
+                Database database = Manager.getDatabase(log[1]);
+                database.drop(log[2]);
+            }
+            catch (Exception e) {
+                System.err.println(e.getMessage());
+            }
+        }
+
+        private void redoInsert(String[] log) {
+            try {
+                Database database = Manager.getDatabase(log[1]);
+                Table table = database.getTable(log[2]);
+                table.insert(Row.parseRowDef(log[3], table.columns));
+            }
+            catch (Exception e) {
+                System.err.println(e.getMessage());
+            }
+        }
+
+        private void redoDelete(String[] log) {
+            try {
+                Database database = Manager.getDatabase(log[1]);
+                Table table = database.getTable(log[2]);
+                table.delete(Row.parseRowDef(log[3], table.columns));
+            }
+            catch (Exception e) {
+                System.err.println(e.getMessage());
+            }
+        }
+
+        private void redoUpdate(String[] log) {
+            try {
+                Database database = Manager.getDatabase(log[1]);
+                Table table = database.getTable(log[2]);
+                for (int i = 3;i < log.length;i++) {
+                    table.update(Row.parseRowDef(log[i], table.columns));
+                }
+            }
+            catch (Exception e) {
+                System.err.println(e.getMessage());
+            }
+        }
+    }
+}
+
+class Session {
+    long sessionId;
+    boolean autoCommit;
+    boolean inTransaction;
+    ArrayList<String> logList;
+    ArrayList<ReentrantReadWriteLock> lockList;
+    String currentDatabase;
+
+    Session(long sessionId) {
+        this.sessionId = sessionId;
+        autoCommit = true;
+        inTransaction = false;
+        logList = new ArrayList<>();
+        lockList = new ArrayList<>();
+        currentDatabase = null;
     }
 }

@@ -47,24 +47,75 @@ public class IServiceHandler implements IService.Iface {
         // TODO
         ThssDB thssDB = ThssDB.getInstance();
         ExecuteStatementResp resp = new ExecuteStatementResp();
-        if (thssDB.checkSession(req.getSessionId())) {
-            // exec
-            SQLExecuteResult result = thssDB.execute(req.getStatement());
-            System.out.println("msg:"+result.getMessage());
-            resp.setMsg(result.getMessage());
-            resp.setStatus(new Status(result.isIsSucceed() ? Global.SUCCESS_CODE : Global.FAILURE_CODE));
-            resp.setIsAbort(result.isIsAbort());
-            resp.setHasResult(result.isHasResult());
-            if (result.isHasResult()) {
-                resp.setColumnsList(result.getColumnList());
-                resp.setRowList(result.getRowList());
+        SQLExecuteResult result = thssDB.execute(req.getStatement(), req.sessionId);
+        resp.setMsg(result.getMessage());
+        resp.setStatus(new Status(result.isIsSucceed() ? Global.SUCCESS_CODE : Global.FAILURE_CODE));
+        resp.setIsAbort(result.isIsAbort());
+        resp.setHasResult(result.isHasResult());
+        if (result.isHasResult()) {
+            resp.setColumnsList(result.getColumnList());
+            resp.setRowList(result.getRowList());
+        }
+        return resp;
+    }
+
+    @Override
+    public SetAutoCommitResp setAutoCommit(SetAutoCommitReq req) throws TException {
+        ThssDB thssDB = ThssDB.getInstance();
+        SetAutoCommitResp resp = new SetAutoCommitResp();
+        int result = thssDB.setAutoCommit(req.isAutoCommit(), req.getSessionId());
+        if (result == 1) {
+            resp.setStatus(new Status(Global.SUCCESS_CODE));
+            if (req.isAutoCommit()) {
+                resp.setMsg("Enable auto commit.");
             }
+            else {
+                resp.setMsg("Disable auto commit.");
+            }
+        }
+        else if (result == 2) {
+            resp.setStatus(new Status(Global.FAILURE_CODE));
+            resp.setMsg("Current transaction hasn't been committed.");
         }
         else {
             resp.setStatus(new Status(Global.FAILURE_CODE));
-            resp.setIsAbort(false);
-            resp.setHasResult(false);
-            resp.setMsg("Invalid session ID!");
+            resp.setMsg("Invalid session!");
+        }
+        return resp;
+    }
+
+    @Override
+    public BeginTransactionResp beginTransaction(BeginTransactionReq req) throws TException {
+        ThssDB thssDB = ThssDB.getInstance();
+        BeginTransactionResp resp = new BeginTransactionResp();
+        int result = thssDB.beginTransaction(req.sessionId);
+        if (result == 1) {
+            resp.setStatus(new Status(Global.SUCCESS_CODE));
+            resp.setMsg("Transaction begins.");
+        }
+        else if (result == 2) {
+            resp.setStatus(new Status(Global.FAILURE_CODE));
+            resp.setMsg("Current transaction hasn't been committed.");
+        }
+        else {
+            resp.setStatus(new Status(Global.FAILURE_CODE));
+            resp.setMsg("Invalid session!");
+        }
+        return resp;
+    }
+
+    @Override
+    public CommitResp commit(CommitReq req) throws TException {
+        ThssDB thssDB = ThssDB.getInstance();
+        CommitResp resp = new CommitResp();
+        int result = thssDB.commit(req.getSessionId());
+        if (result == 1) {
+            resp.setStatus(new Status(Global.SUCCESS_CODE));
+            resp.setMsg("Commit Succeeds.");
+        }
+        else {
+            resp.setStatus(new Status(Global.FAILURE_CODE));
+            resp.setMsg("Invalid session!");
         }
         return resp;
     }

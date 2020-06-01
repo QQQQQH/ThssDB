@@ -1,5 +1,7 @@
 package cn.edu.thssdb.schema;
 
+import cn.edu.thssdb.exception.ColumnValueSizeNotMatchedException;
+
 import java.beans.Encoder;
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -31,11 +33,41 @@ public class Row implements Serializable {
     }
 
     public String toString() {
-        if (entries == null)
-            return "EMPTY";
-        StringJoiner sj = new StringJoiner(", ");
+//        if (entries == null)
+//            return "EMPTY";
+//        StringJoiner sj = new StringJoiner(",");
+//        for (Entry e : entries)
+//            sj.add(e.toString());
+//        return sj.toString();
+        ArrayList<String> s = new ArrayList<>();
         for (Entry e : entries)
-            sj.add(e.toString());
-        return sj.toString();
+            s.add(e.toString());
+        return String.join(",", s);
+    }
+
+    public static Row parseRowDef(String attrStr, ArrayList<Column> columnsList) {
+        String[] attrListStr = attrStr.split(",");
+        if (attrListStr.length != columnsList.size()) {
+            throw new ColumnValueSizeNotMatchedException();
+        }
+        ArrayList<Entry> entryList = new ArrayList<>();
+        for (int i = 0;i < attrListStr.length;i++) {
+            switch (columnsList.get(i).getType()) {
+                case INT:
+                case LONG:
+                    entryList.add(new Entry(Long.valueOf(attrListStr[i])));
+                    break;
+                case FLOAT:
+                case DOUBLE:
+                    entryList.add(new Entry(Double.valueOf(attrListStr[i])));
+                    break;
+                case STRING:
+                    entryList.add(new Entry(attrListStr[i]));
+                    break;
+                default:
+                    break;
+            }
+        }
+        return new Row(entryList);
     }
 }

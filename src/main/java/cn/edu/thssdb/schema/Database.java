@@ -11,29 +11,29 @@ import java.util.HashMap;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 public class Database {
-
-    private String name;
-    private HashMap<String, Table> tables;
-    private ReentrantReadWriteLock lock;
+    String name;
+    HashMap<String, Table> tables;
+    ReentrantReadWriteLock lock;
 
     public Database(String name) {
         this.name = name;
         lock = new ReentrantReadWriteLock();
-        tables = null;
+        tables = new HashMap<>();
+        recover();
     }
 
-    private void persist() {
+    boolean persist() {
         // TODO
-        if (tables == null) {
-            return;
-        }
-        File dir = new File(Global.DATABASE_DIR+File.separator+name);
-        if (!dir.exists() && !dir.mkdirs()) {
-            System.err.println("Fail to persist database due to mkdirs error!");
-            return;
-        }
         try {
             lock.writeLock().lock();
+            if (tables == null) {
+                return true;
+            }
+            File dir = new File(Global.DATABASE_DIR+File.separator+name);
+            if (!dir.exists() && !dir.mkdirs()) {
+                System.err.println("Fail to persist database due to mkdirs error!");
+                return false;
+            }
             ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(dir.toString()+File.separator+"TABLES_NAME"));
             for (String tableName: tables.keySet()) {
                 oos.writeObject(tableName);
@@ -44,17 +44,21 @@ public class Database {
                 oosSchema.close();
                 Table table = tables.get(tableName);
                 if (table == null) {
-                    System.err.println("Table is null in index while trying to persist.");
+                    System.err.println("Table is null in index while trying to persist database.");
+                    return false;
                 }
                 else {
-                    table.persist();
+                    if (!table.persist()) {
+                        return false;
+                    }
                 }
             }
             oos.close();
+            return true;
         }
         catch (IOException e) {
-            e.printStackTrace();
             System.err.print("Fail to persist database due to IOException!");
+            return false;
         }
         finally {
             lock.writeLock().unlock();
@@ -63,7 +67,6 @@ public class Database {
 
     void recover() {
         // TODO
-        tables = new HashMap<>();
         File file = new File(Global.DATABASE_DIR+File.separator+name+File.separator+"TABLES_NAME");
         if (!file.exists()) return;
         try {
@@ -81,13 +84,14 @@ public class Database {
                 FileInputStream fisSchema = new FileInputStream(schemaFile.toString());
                 ObjectInputStream oisSchema = new ObjectInputStream(fisSchema);
                 while (fisSchema.available() > 0) {
-                    String schemaStr = (String)oisSchema.readObject();
-                    String[] schemaListStr = schemaStr.split(",");
-                    columnsList.add(new Column(schemaListStr[0], // name
-                            ColumnType.valueOf(schemaListStr[1]),  // ColumnType
-                            Integer.parseInt(schemaListStr[2]),  // primary
-                            schemaListStr[3].equals("true"), // notNull
-                            Integer.parseInt(schemaListStr[2]))); // maxLength
+                    String defStr = (String)oisSchema.readObject();
+//                    String[] schemaListStr = schemaStr.split(",");
+//                    columnsList.add(new Column(schemaListStr[0], // name
+//                            ColumnType.valueOf(schemaListStr[1]),  // ColumnType
+//                            Integer.parseInt(schemaListStr[2]),  // primary
+//                            schemaListStr[3].equals("true"), // notNull
+//                            Integer.parseInt(schemaListStr[2]))); // maxLength
+                    columnsList.add(Column.parseColumnDef(defStr));
                 }
                 oisSchema.close();
                 fisSchema.close();
@@ -97,11 +101,9 @@ public class Database {
             fis.close();
         }
         catch (IOException e) {
-            e.printStackTrace();
             System.err.println("Fail to recover database due to IOException!");
         }
         catch (ClassNotFoundException e) {
-            e.printStackTrace();
             System.err.println("Fail to recover database due to ClassNotFoundException!");
         }
         finally {
@@ -170,15 +172,4 @@ public class Database {
         }
     }
 
-    void quit() {
-        // TODO
-        persist();
-        try {
-            lock.writeLock().lock();
-            tables = null;
-        }
-        finally {
-            lock.writeLock().unlock();
-        }
-    }
 }

@@ -18,9 +18,17 @@ public class Global {
     // custom
     public static final String CONNECT = "connect;";
     public static final String DISCONNECT = "disconnect;";
+    public static final String SET_AUTO_COMMIT_TRUE = "set auto commit true;";
+    public static final String SET_AUTO_COMMIT_FALSE = "set auto commit false;";
+    public static final String BEGIN_TRANSACTION = "begin transaction;";
+    public static final String COMMIT = "commit;";
 
     public static final String USERNAME = "SA";
     public static final String PASSWORD = "";
 
     public static final String DATABASE_DIR = "db";
+
+    public static final int FLUSH_THRESHOLED = 5;
+
+    public static final int MIN_COLUMN_LEN = 5;
 }

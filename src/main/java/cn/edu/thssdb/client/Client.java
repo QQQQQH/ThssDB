@@ -18,6 +18,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.PrintStream;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.Scanner;
 
 public class Client {
@@ -71,16 +74,25 @@ public class Client {
                     case Global.QUIT:
                         open = false;
                         break;
-
                     case Global.CONNECT:
                         connect();
                         break;
                     case Global.DISCONNECT:
                         disconnect();
                         break;
-
+                    case Global.SET_AUTO_COMMIT_TRUE:
+                        setAutoCommit(true);
+                        break;
+                    case Global.SET_AUTO_COMMIT_FALSE:
+                        setAutoCommit(false);
+                        break;
+                    case Global.BEGIN_TRANSACTION:
+                        beginTransaction();
+                        break;
+                    case Global.COMMIT:
+                        commit();
+                        break;
                     default:
-//                        println("Invalid statements!");
                         execute(msg);
                         break;
                 }
@@ -158,8 +170,50 @@ public class Client {
             ExecuteStatementResp resp = client.executeStatement(req);
             if (resp.isHasResult()) {
                 // show result
-                println("Result will be showed here.");
+                printTable(resp.getColumnsList(), resp.getRowList());
             }
+            println(resp.getMsg());
+        } catch (TException e) {
+            logger.error(e.getMessage());
+        }
+    }
+
+    private static void setAutoCommit(boolean autoCommit) {
+        if (sessionId == -1) {
+            println("Client is not connected!");
+            return;
+        }
+        SetAutoCommitReq req = new SetAutoCommitReq(sessionId, autoCommit);
+        try {
+            SetAutoCommitResp resp = client.setAutoCommit(req);
+            println(resp.getMsg());
+        } catch (TException e) {
+            logger.error(e.getMessage());
+        }
+    }
+
+    private static void beginTransaction() {
+        if (sessionId == -1) {
+            println("Client is not connected!");
+            return;
+        }
+        BeginTransactionReq req = new BeginTransactionReq(sessionId);
+        try {
+            BeginTransactionResp resp = client.beginTransaction(req);
+            println(resp.getMsg());
+        } catch (TException e) {
+            logger.error(e.getMessage());
+        }
+    }
+
+    private static void commit() {
+        if (sessionId == -1) {
+            println("Client is not connected!");
+            return;
+        }
+        CommitReq req = new CommitReq(sessionId);
+        try {
+            CommitResp resp = client.commit(req);
             println(resp.getMsg());
         } catch (TException e) {
             logger.error(e.getMessage());
@@ -215,6 +269,58 @@ public class Client {
         println("----------------------");
         println("Starting ThssDB Client");
         println("----------------------");
+    }
+
+    static void printTable(List<String> attrs, List<List<String>> rowList) {
+        ArrayList<Integer> columnLens = new ArrayList<>();
+        for (String attr: attrs) {
+            columnLens.add(attr.length());
+        }
+        int colCnt = attrs.size();
+        for (List<String> row: rowList) {
+            for (int i = 0;i < colCnt;i++) {
+                if (row.get(i).length() > columnLens.get(i)) {
+                    columnLens.set(i, row.get(i).length());
+                }
+            }
+        }
+        for (int i = 0;i < colCnt;i++) {
+            if (columnLens.get(i) < Global.MIN_COLUMN_LEN) {
+                columnLens.set(i, Global.MIN_COLUMN_LEN);
+            }
+        }
+        String rowSep = getRowSepStr(columnLens);
+        println(rowSep);
+        println(getRowStr(attrs, columnLens, colCnt));
+        println(rowSep);
+        for (List<String> row: rowList) {
+            println(getRowStr(row, columnLens, colCnt));
+            println(rowSep);
+        }
+    }
+
+    static String getRowSepStr(List<Integer> columnLens) {
+        StringBuilder rowSepStr = new StringBuilder("+");
+        for (Integer len: columnLens) {
+            for (int i = 0;i < len;i++) {
+                rowSepStr.append("-");
+            }
+            rowSepStr.append("+");
+        }
+        return rowSepStr.toString();
+    }
+
+    static String getRowStr(List<String> row, List<Integer> columnLens, int colCnt) {
+        StringBuilder rowStr = new StringBuilder("|");
+        for (int i = 0;i < colCnt;i++) {
+            String entry = row.get(i);
+            int spaceLen = columnLens.get(i)-entry.length();
+            for (int j = 0;j < spaceLen;j++) {
+                rowStr.append(" ");
+            }
+            rowStr.append(entry).append("|");
+        }
+        return rowStr.toString();
     }
 
     static void print(String msg) {

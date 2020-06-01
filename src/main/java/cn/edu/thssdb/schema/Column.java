@@ -24,13 +24,22 @@ public class Column implements Comparable<Column> {
 
     public String getName() { return name; }
 
-    public void setPrimary() { primary = 1; }
+    void setPrimary() { primary = 1; }
 
-    public boolean isPrimary() { return primary == 1; }
+    boolean isPrimary() { return primary == 1; }
 
-    public boolean isNotNull() { return notNull; }
+    boolean isNotNull() { return notNull; }
 
     public ColumnType getType() { return type; }
+
+    static Column parseColumnDef(String defStr) {
+        String[] defListStr = defStr.split(",");
+        return new Column(defListStr[0], // name
+                ColumnType.valueOf(defListStr[1]),  // ColumnType
+                Integer.parseInt(defListStr[2]),  // primary
+                defListStr[3].equals("true"), // notNull
+                Integer.parseInt(defListStr[2])); // maxLength
+    }
 
     public String toString() {
         return name + ',' + type + ',' + primary + ',' + notNull + ',' + maxLength;
