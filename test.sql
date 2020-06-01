@@ -21,6 +21,8 @@ delete from t2 where a=1;
 select a from t2;
 
 -- client 2:
+connect;
+use db1;
 select * from t1;
 select * from t2;
 
