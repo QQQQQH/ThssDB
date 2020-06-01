@@ -67,9 +67,9 @@ public class Database {
 
     void recover() {
         // TODO
+        File file = new File(Global.DATABASE_DIR+File.separator+name+File.separator+"TABLES_NAME");
+        if (!file.exists()) return;
         try {
-            File file = new File(Global.DATABASE_DIR+File.separator+name+File.separator+"TABLES_NAME");
-            if (!file.exists()) return;
             lock.writeLock().lock();
             FileInputStream fis = new FileInputStream(file);
             ObjectInputStream ois = new ObjectInputStream(fis);
