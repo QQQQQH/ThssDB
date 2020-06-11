@@ -7,7 +7,12 @@ public class Entry implements Comparable<Entry>, Serializable {
     public Comparable value;
 
     public Entry(Comparable value) {
-        this.value = value;
+        if (value instanceof String && ((String) value).startsWith("'") && ((String) value).endsWith("'")) {
+            this.value = ((String) value).substring(1, ((String) value).length()-1);
+        }
+        else {
+            this.value = value;
+        }
     }
 
     @Override

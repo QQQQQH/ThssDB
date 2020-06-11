@@ -91,21 +91,52 @@ public class QueryResult {
 
     private void setAttrs(boolean all, MetaInfo metaInfoLeft, MetaInfo metaInfoRight) {
         this.attrs = new ArrayList<>();
+        int leftColumnsSize = metaInfoLeft.getColumnSize();
         if (all) {
-            int leftSize = metaInfoLeft.getColumnSize();
-            for (int i = 0;i < leftSize;i++) attrs.add(metaInfoLeft.getColumnName(i));
+            for (int i = 0;i < leftColumnsSize;i++) {
+                String columnName = metaInfoLeft.getColumnName(i);
+                if (metaInfoRight != null && metaInfoRight.containsColumn(columnName)) {
+                    attrs.add(metaInfoLeft.getTableName()+"."+metaInfoLeft.getColumnName(i));
+                }
+                else {
+                    attrs.add(metaInfoLeft.getColumnName(i));
+                }
+            }
             if (metaInfoRight != null) {
                 int rightSize = metaInfoRight.getColumnSize();
-                for (int i = 0;i < rightSize;i++) attrs.add(metaInfoRight.getColumnName(i));
+                for (int i = 0;i < rightSize;i++) {
+                    String columnName = metaInfoRight.getColumnName(i);
+                    if (metaInfoLeft.containsColumn(columnName)) {
+                        attrs.add(metaInfoRight.getTableName()+"."+metaInfoRight.getColumnName(i));
+                    }
+                    else {
+                        attrs.add(metaInfoRight.getColumnName(i));
+                    }
+                }
             }
         }
         else {
+            int leftColumnsCnt = 0;
             for (Integer idx: index) {
-                if (idx < metaInfoLeft.getColumnSize()) {
+                if (idx < leftColumnsSize) {
                     this.attrs.add(metaInfoLeft.getColumnName(idx));
+                    leftColumnsCnt++;
                 }
                 else {
-                    this.attrs.add(metaInfoRight.getColumnName(idx-metaInfoLeft.getColumnSize()));
+                    String columnNameRight = metaInfoRight.getColumnName(idx-metaInfoLeft.getColumnSize());
+                    boolean duplicateColumn = false;
+                    for (int i = 0;i < leftColumnsCnt;i++) {
+                        String columnNameLeft = this.attrs.get(i);
+                        if (columnNameLeft.equals(columnNameRight)) {
+                            this.attrs.set(i, metaInfoLeft.getTableName()+"."+columnNameLeft);
+                            this.attrs.add(metaInfoRight.getTableName()+"."+columnNameRight);
+                            duplicateColumn = true;
+                            break;
+                        }
+                    }
+                    if (!duplicateColumn) {
+                        this.attrs.add(columnNameRight);
+                    }
                 }
             }
         }
@@ -338,11 +369,17 @@ public class QueryResult {
         Comparer comparerRight = expression.comparerRight;
         Expression.OP op = expression.op;
         if (comparerLeft != null && comparerRight == null && op == null) {
-            return getValueFromComparer(comparerLeft,
+            Comparable comparableLeft = getValueFromComparer(comparerLeft,
                     metaInfoLeft,
                     metaInfoRight,
                     row
             );
+            if (comparableLeft instanceof String && ((String) comparableLeft).startsWith("'") && ((String) comparableLeft).endsWith("'")) {
+                return ((String) comparableLeft).substring(1, ((String) comparableLeft).length()-1);
+            }
+            else {
+                return comparableLeft;
+            }
         }
         else if (comparerLeft != null && comparerRight != null && op != null){
             Comparable comparableLeft = getValueFromComparer(
