@@ -31,9 +31,18 @@ class MetaInfo {
 
     int getColumnSize() { return columns.size(); }
 
-    String getColumnName(int index) { return tableName+'.'+columns.get(index).getName(); }
+    String getColumnName(int index) { return columns.get(index).getName(); }
 
     ColumnType getColumnType(int index) { return columns.get(index).getType(); }
 
     String getTableName() { return tableName; }
+
+    boolean containsColumn(String columnName) {
+        for (Column column: columns) {
+            if (column.getName().equals(columnName)) {
+                return true;
+            }
+        }
+        return false;
+    }
 }

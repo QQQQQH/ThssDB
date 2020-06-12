@@ -32,14 +32,13 @@ cn/edu/thssdb/rpc/thrift/IService$disconnect_args$disconnect_argsStandardScheme.
 cn/edu/thssdb/parser/Statement/ShowMetaStatement.class
 cn/edu/thssdb/parser/SQLParser$View_nameContext.class
 cn/edu/thssdb/rpc/thrift/IService$disconnect_args.class
-cn/edu/thssdb/rpc/thrift/DisconnetReq$_Fields.class
 cn/edu/thssdb/utils/Global.class
 cn/edu/thssdb/rpc/thrift/IService$AsyncProcessor$executeStatement$1.class
 cn/edu/thssdb/rpc/thrift/IService$Processor.class
+cn/edu/thssdb/rpc/thrift/DisconnectResp$DisconnectRespStandardSchemeFactory.class
 cn/edu/thssdb/rpc/thrift/IService$setAutoCommit_result$setAutoCommit_resultTupleScheme.class
 cn/edu/thssdb/rpc/thrift/Status$1.class
 cn/edu/thssdb/parser/Statement/CreateTableStatement.class
-cn/edu/thssdb/rpc/thrift/DisconnetResp$1.class
 cn/edu/thssdb/exception/InvalidOperandTypeException.class
 cn/edu/thssdb/exception/DuplicateMatchedException.class
 cn/edu/thssdb/schema/Row.class
@@ -50,7 +49,6 @@ cn/edu/thssdb/parser/SQLParser$Quit_stmtContext.class
 cn/edu/thssdb/rpc/thrift/IService$Processor$disconnect.class
 cn/edu/thssdb/client/Client.class
 cn/edu/thssdb/parser/SQLParser$Drop_db_stmtContext.class
-cn/edu/thssdb/rpc/thrift/DisconnetResp$DisconnetRespStandardSchemeFactory.class
 cn/edu/thssdb/rpc/thrift/ConnectResp$ConnectRespStandardScheme.class
 cn/edu/thssdb/parser/SQLParser$Column_full_nameContext.class
 cn/edu/thssdb/rpc/thrift/IService$AsyncClient$disconnect_call.class
@@ -66,8 +64,8 @@ cn/edu/thssdb/rpc/thrift/ExecuteStatementReq$_Fields.class
 cn/edu/thssdb/parser/SQLLexer.class
 cn/edu/thssdb/rpc/thrift/CommitResp.class
 cn/edu/thssdb/rpc/thrift/BeginTransactionResp$1.class
+cn/edu/thssdb/rpc/thrift/DisconnectReq$DisconnectReqStandardScheme.class
 cn/edu/thssdb/rpc/thrift/IService$getTime_args$getTime_argsTupleScheme.class
-cn/edu/thssdb/rpc/thrift/DisconnetReq$DisconnetReqStandardSchemeFactory.class
 cn/edu/thssdb/rpc/thrift/GetTimeResp.class
 cn/edu/thssdb/rpc/thrift/IService$AsyncClient$getTime_call.class
 cn/edu/thssdb/parser/Statement/Comparer.class
@@ -97,7 +95,6 @@ cn/edu/thssdb/rpc/thrift/IService$AsyncProcessor$executeStatement.class
 cn/edu/thssdb/index/BPlusTreeInternalNode.class
 cn/edu/thssdb/rpc/thrift/IService$Processor$setAutoCommit.class
 cn/edu/thssdb/exception/DuplicateKeyException.class
-cn/edu/thssdb/rpc/thrift/DisconnetReq$DisconnetReqStandardScheme.class
 cn/edu/thssdb/rpc/thrift/IService$getTime_result$getTime_resultStandardSchemeFactory.class
 cn/edu/thssdb/rpc/thrift/ExecuteStatementResp$ExecuteStatementRespTupleSchemeFactory.class
 cn/edu/thssdb/rpc/thrift/IService$AsyncProcessor$beginTransaction$1.class
@@ -109,7 +106,9 @@ cn/edu/thssdb/exception/InvalidOperatorException.class
 cn/edu/thssdb/rpc/thrift/IService$setAutoCommit_result$setAutoCommit_resultStandardScheme.class
 cn/edu/thssdb/rpc/thrift/IService$Iface.class
 cn/edu/thssdb/rpc/thrift/IService$getTime_args$getTime_argsStandardSchemeFactory.class
+cn/edu/thssdb/rpc/thrift/DisconnectResp$DisconnectRespTupleScheme.class
 cn/edu/thssdb/rpc/thrift/IService$beginTransaction_args$beginTransaction_argsTupleScheme.class
+cn/edu/thssdb/rpc/thrift/DisconnectReq$DisconnectReqStandardSchemeFactory.class
 cn/edu/thssdb/rpc/thrift/CommitResp$CommitRespStandardScheme.class
 cn/edu/thssdb/parser/SQLParser$Show_db_stmtContext.class
 cn/edu/thssdb/parser/SQLParser$PasswordContext.class
@@ -125,7 +124,6 @@ cn/edu/thssdb/rpc/thrift/IService.class
 cn/edu/thssdb/rpc/thrift/ConnectResp.class
 cn/edu/thssdb/rpc/thrift/IService$connect_args$connect_argsStandardSchemeFactory.class
 cn/edu/thssdb/rpc/thrift/IService$AsyncProcessor$connect$1.class
-cn/edu/thssdb/rpc/thrift/DisconnetReq$DisconnetReqTupleScheme.class
 cn/edu/thssdb/rpc/thrift/IService$setAutoCommit_args$setAutoCommit_argsStandardSchemeFactory.class
 cn/edu/thssdb/schema/Session.class
 cn/edu/thssdb/parser/SQLParser$Sql_stmtContext.class
@@ -158,6 +156,7 @@ cn/edu/thssdb/parser/SQLParser$Result_columnContext.class
 cn/edu/thssdb/query/MetaInfo.class
 cn/edu/thssdb/parser/Statement/Expression.class
 cn/edu/thssdb/rpc/thrift/CommitReq$CommitReqStandardSchemeFactory.class
+cn/edu/thssdb/rpc/thrift/DisconnectResp.class
 cn/edu/thssdb/rpc/thrift/SetAutoCommitReq$SetAutoCommitReqStandardScheme.class
 cn/edu/thssdb/rpc/thrift/IService$setAutoCommit_args$setAutoCommit_argsTupleSchemeFactory.class
 cn/edu/thssdb/parser/Statement/DropDatabaseStatement.class
@@ -183,6 +182,7 @@ cn/edu/thssdb/rpc/thrift/IService$setAutoCommit_result.class
 cn/edu/thssdb/rpc/thrift/BeginTransactionReq.class
 cn/edu/thssdb/rpc/thrift/ConnectReq$1.class
 cn/edu/thssdb/rpc/thrift/SetAutoCommitReq.class
+cn/edu/thssdb/rpc/thrift/DisconnectResp$DisconnectRespTupleSchemeFactory.class
 cn/edu/thssdb/rpc/thrift/SetAutoCommitResp$SetAutoCommitRespStandardSchemeFactory.class
 cn/edu/thssdb/parser/SQLParser$ComparatorContext.class
 cn/edu/thssdb/parser/SQLParser$Select_stmtContext.class
@@ -203,7 +203,6 @@ cn/edu/thssdb/rpc/thrift/IService$setAutoCommit_result$_Fields.class
 cn/edu/thssdb/rpc/thrift/ExecuteStatementResp$ExecuteStatementRespStandardSchemeFactory.class
 cn/edu/thssdb/rpc/thrift/IService$Processor$executeStatement.class
 cn/edu/thssdb/parser/Statement/CreatDatabaseStatement.class
-cn/edu/thssdb/rpc/thrift/DisconnetResp$_Fields.class
 cn/edu/thssdb/rpc/thrift/GetTimeReq$GetTimeReqTupleScheme.class
 cn/edu/thssdb/parser/SQLParser$ConditionContext.class
 cn/edu/thssdb/rpc/thrift/IService$beginTransaction_result$beginTransaction_resultTupleScheme.class
@@ -218,9 +217,8 @@ cn/edu/thssdb/rpc/thrift/IService$executeStatement_args.class
 cn/edu/thssdb/parser/SQLParser$Update_stmtContext.class
 cn/edu/thssdb/rpc/thrift/IService$getTime_result$_Fields.class
 cn/edu/thssdb/rpc/thrift/IService$disconnect_result$disconnect_resultStandardSchemeFactory.class
-cn/edu/thssdb/rpc/thrift/DisconnetResp$DisconnetRespTupleSchemeFactory.class
-cn/edu/thssdb/rpc/thrift/DisconnetResp$DisconnetRespStandardScheme.class
 cn/edu/thssdb/rpc/thrift/ConnectResp$_Fields.class
+cn/edu/thssdb/rpc/thrift/DisconnectReq.class
 cn/edu/thssdb/rpc/thrift/IService$executeStatement_args$executeStatement_argsTupleSchemeFactory.class
 cn/edu/thssdb/rpc/thrift/ConnectReq$_Fields.class
 cn/edu/thssdb/rpc/thrift/ConnectResp$1.class
@@ -229,6 +227,7 @@ cn/edu/thssdb/rpc/thrift/Status$StatusStandardSchemeFactory.class
 cn/edu/thssdb/rpc/thrift/IService$AsyncClient$commit_call.class
 cn/edu/thssdb/parser/Statement/SelectStatement.class
 cn/edu/thssdb/rpc/thrift/IService$beginTransaction_result$beginTransaction_resultTupleSchemeFactory.class
+cn/edu/thssdb/rpc/thrift/DisconnectResp$DisconnectRespStandardScheme.class
 cn/edu/thssdb/rpc/thrift/CommitResp$_Fields.class
 cn/edu/thssdb/rpc/thrift/IService$AsyncProcessor$getTime$1.class
 cn/edu/thssdb/rpc/thrift/GetTimeResp$GetTimeRespStandardScheme.class
@@ -242,13 +241,14 @@ cn/edu/thssdb/rpc/thrift/GetTimeReq$_Fields.class
 cn/edu/thssdb/rpc/thrift/Status$StatusStandardScheme.class
 cn/edu/thssdb/parser/Statement/ColumnFullName.class
 cn/edu/thssdb/parser/Statement/UpdateStatement.class
-cn/edu/thssdb/rpc/thrift/DisconnetResp$DisconnetRespTupleScheme.class
 cn/edu/thssdb/rpc/thrift/GetTimeResp$_Fields.class
 cn/edu/thssdb/parser/SQLParser$Use_db_stmtContext.class
 cn/edu/thssdb/parser/SQLBaseListener.class
 cn/edu/thssdb/exception/DatabaseIsBeingUsedException.class
+cn/edu/thssdb/rpc/thrift/DisconnectReq$1.class
 cn/edu/thssdb/rpc/thrift/IService$disconnect_result$disconnect_resultStandardScheme.class
 cn/edu/thssdb/exception/EmptyKeyException.class
+cn/edu/thssdb/rpc/thrift/DisconnectResp$1.class
 cn/edu/thssdb/exception/WriteLogException.class
 cn/edu/thssdb/rpc/thrift/IService$executeStatement_result$executeStatement_resultStandardSchemeFactory.class
 cn/edu/thssdb/parser/SQLParser$Multiple_conditionContext.class
@@ -293,12 +293,12 @@ cn/edu/thssdb/rpc/thrift/GetTimeResp$1.class
 cn/edu/thssdb/index/BPlusTreeNode.class
 cn/edu/thssdb/rpc/thrift/BeginTransactionReq$1.class
 cn/edu/thssdb/parser/MySQLVisitor.class
+cn/edu/thssdb/rpc/thrift/DisconnectReq$DisconnectReqTupleScheme.class
 cn/edu/thssdb/rpc/thrift/IService$connect_args$connect_argsStandardScheme.class
 cn/edu/thssdb/parser/SQLParser$ParseContext.class
 cn/edu/thssdb/rpc/thrift/IService$setAutoCommit_result$setAutoCommit_resultStandardSchemeFactory.class
 cn/edu/thssdb/rpc/thrift/IService$commit_result$commit_resultStandardSchemeFactory.class
 cn/edu/thssdb/rpc/thrift/ConnectReq$ConnectReqStandardScheme.class
-cn/edu/thssdb/rpc/thrift/DisconnetReq.class
 cn/edu/thssdb/exception/DivideZeroException.class
 cn/edu/thssdb/schema/Manager.class
 cn/edu/thssdb/parser/SQLParser$Create_table_stmtContext.class
@@ -307,6 +307,7 @@ cn/edu/thssdb/rpc/thrift/IService$connect_result.class
 cn/edu/thssdb/rpc/thrift/IService$AsyncClient.class
 cn/edu/thssdb/rpc/thrift/BeginTransactionResp$BeginTransactionRespStandardSchemeFactory.class
 cn/edu/thssdb/parser/SQLParser$Revoke_stmtContext.class
+cn/edu/thssdb/rpc/thrift/DisconnectReq$DisconnectReqTupleSchemeFactory.class
 cn/edu/thssdb/exception/OperandTypeNotMatchedException.class
 cn/edu/thssdb/schema/Table.class
 cn/edu/thssdb/parser/SQLParser$Table_constraintContext.class
@@ -319,13 +320,12 @@ cn/edu/thssdb/type/ColumnType$1.class
 cn/edu/thssdb/rpc/thrift/IService$beginTransaction_args.class
 cn/edu/thssdb/exception/KeyNotExistException.class
 cn/edu/thssdb/parser/SQLParser$Database_nameContext.class
-cn/edu/thssdb/rpc/thrift/DisconnetReq$DisconnetReqTupleSchemeFactory.class
+cn/edu/thssdb/rpc/thrift/DisconnectReq$_Fields.class
 cn/edu/thssdb/schema/Manager$2.class
 cn/edu/thssdb/rpc/thrift/IService$Client$Factory.class
 cn/edu/thssdb/parser/SQLParser$ComparerContext.class
 cn/edu/thssdb/rpc/thrift/ExecuteStatementResp$ExecuteStatementRespStandardScheme.class
 cn/edu/thssdb/rpc/thrift/ConnectReq$ConnectReqTupleSchemeFactory.class
-cn/edu/thssdb/rpc/thrift/DisconnetReq$1.class
 cn/edu/thssdb/index/BPlusTree.class
 cn/edu/thssdb/schema/Database.class
 cn/edu/thssdb/rpc/thrift/IService$disconnect_result.class
@@ -337,7 +337,6 @@ cn/edu/thssdb/query/QueryResult$1.class
 cn/edu/thssdb/rpc/thrift/CommitReq$CommitReqTupleScheme.class
 cn/edu/thssdb/rpc/thrift/CommitReq$_Fields.class
 cn/edu/thssdb/rpc/thrift/GetTimeReq.class
-cn/edu/thssdb/rpc/thrift/DisconnetResp.class
 cn/edu/thssdb/rpc/thrift/IService$beginTransaction_args$beginTransaction_argsStandardScheme.class
 cn/edu/thssdb/parser/SQLBaseVisitor.class
 cn/edu/thssdb/parser/SQLParser$Insert_stmtContext.class
@@ -349,3 +348,4 @@ cn/edu/thssdb/rpc/thrift/IService$setAutoCommit_args$setAutoCommit_argsTupleSche
 cn/edu/thssdb/rpc/thrift/SetAutoCommitReq$_Fields.class
 cn/edu/thssdb/exception/ColumnValueSizeNotMatchedException.class
 cn/edu/thssdb/rpc/thrift/GetTimeReq$GetTimeReqTupleSchemeFactory.class
+cn/edu/thssdb/rpc/thrift/DisconnectResp$_Fields.class

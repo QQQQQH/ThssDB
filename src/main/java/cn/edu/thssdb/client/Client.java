@@ -19,7 +19,6 @@ import org.slf4j.LoggerFactory;
 
 import java.io.PrintStream;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Scanner;
 
@@ -142,10 +141,10 @@ public class Client {
             println("Client is not connected!");
             return;
         }
-        DisconnetReq req = new DisconnetReq();
+        DisconnectReq req = new DisconnectReq();
         req.setSessionId(sessionId);
         try {
-            DisconnetResp resp = client.disconnect(req);
+            DisconnectResp resp = client.disconnect(req);
             if (resp.getStatus().getCode() == Global.SUCCESS_CODE) {
                 println("Disconnect succeed.");
             }

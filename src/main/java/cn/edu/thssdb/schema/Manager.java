@@ -604,27 +604,40 @@ public class Manager {
                     session.lockList.add(table.lock);
                 }
 
-                if (statement.columnNameList.size()
-                        != statement.valueList.size()) {
+                int size = statement.columnNameList.size();
+                if ((size != 0 && size != statement.valueList.size()) ||
+                        (size == 0 && statement.valueList.size() != table.columns.size())) {
                     throw new ColumnValueSizeNotMatchedException();
                 }
                 ArrayList<Entry> entryList = new ArrayList<>();
-                boolean[] covers = new boolean[statement.columnNameList.size()];
+                boolean[] covers = new boolean[statement.valueList.size()];
                 Arrays.fill(covers, false);
-                for (Column column: table.columns) {
-                    int size = statement.columnNameList.size();
-                    boolean assignExist = false;
-                    for (int i = 0;i < size;i++) {
-                        String columnName = statement.columnNameList.get(i);
+                int columnsCnt = table.columns.size();
+                for (int i = 0;i < columnsCnt;i++) {
+                    Column column = table.columns.get(i);
+                    if (size == 0) {
                         Comparable value = statement.valueList.get(i);
+                        if (ColumnType.typeCheck(column.getType(), value)) {
+                            entryList.add(new Entry(value));
+                            covers[i] = true;
+                        }
+                        else {
+                            throw new ColumnTypeNotMatchedException();
+                        }
+                        continue;
+                    }
+                    boolean assignExist = false;
+                    for (int j = 0;j < size;j++) {
+                        String columnName = statement.columnNameList.get(j);
+                        Comparable value = statement.valueList.get(j);
                         if (column.getName().equals(columnName)) {
-                            if (covers[i]) {
+                            if (covers[j]) {
                                 throw new DuplicateAssignException();
                             }
                             else if (ColumnType.typeCheck(column.getType(), value)) {
                                 assignExist = true;
                                 entryList.add(new Entry(value));
-                                covers[i] = true;
+                                covers[j] = true;
                                 break;
                             }
                             else {
