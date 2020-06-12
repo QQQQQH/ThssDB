@@ -28,7 +28,7 @@ public class Global {
 
     public static final String DATABASE_DIR = "db";
 
-    public static final int FLUSH_THRESHOLED = 5;
+    public static final int FLUSH_THRESHOLED = 100;
 
     public static final int MIN_COLUMN_LEN = 5;
 }

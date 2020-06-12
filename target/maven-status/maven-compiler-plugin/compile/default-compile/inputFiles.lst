@@ -27,6 +27,7 @@
 /Users/myosotis/Documents/GitHub/ThssDB/src/main/java/cn/edu/thssdb/exception/InvalidOperatorException.java
 /Users/myosotis/Documents/GitHub/ThssDB/src/main/java/cn/edu/thssdb/exception/DatabaseNotExistException.java
 /Users/myosotis/Documents/GitHub/ThssDB/src/main/java/cn/edu/thssdb/parser/Statement/DropTableStatement.java
+/Users/myosotis/Documents/GitHub/ThssDB/src/main/java/cn/edu/thssdb/client/Client_test.java
 /Users/myosotis/Documents/GitHub/ThssDB/src/main/java/cn/edu/thssdb/exception/ColumnValueSizeNotMatchedException.java
 /Users/myosotis/Documents/GitHub/ThssDB/src/main/java/cn/edu/thssdb/query/QueryTable.java
 /Users/myosotis/Documents/GitHub/ThssDB/src/main/java/cn/edu/thssdb/schema/Manager.java

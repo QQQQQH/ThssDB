@@ -287,6 +287,7 @@ cn/edu/thssdb/parser/Statement/DropTableStatement.class
 cn/edu/thssdb/parser/SQLParser$Grant_stmtContext.class
 cn/edu/thssdb/rpc/thrift/IService$getTime_args$getTime_argsTupleSchemeFactory.class
 cn/edu/thssdb/rpc/thrift/IService$commit_result.class
+cn/edu/thssdb/client/Client_test.class
 cn/edu/thssdb/schema/Manager$Logger.class
 cn/edu/thssdb/schema/Manager$1.class
 cn/edu/thssdb/rpc/thrift/GetTimeResp$1.class

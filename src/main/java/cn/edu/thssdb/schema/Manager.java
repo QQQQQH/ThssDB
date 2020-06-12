@@ -330,7 +330,11 @@ public class Manager {
             return resultList;
         }
         else {
-            return sqlExecutor.executeSQL(statementList, session);
+            ArrayList<SQLExecutor.SQLExecuteResult> resultList = sqlExecutor.executeSQL(statementList, session);
+            if (resultList.size() == 0) {
+                resultList.add(new SQLExecutor.SQLExecuteResult("SQL syntax error! Check your statement.", false, false));
+            }
+            return resultList;
         }
     }
 
@@ -401,6 +405,9 @@ public class Manager {
         private ArrayList<SQLExecuteResult> executeSQL(List<Statement> statementList, Session session) {
             ArrayList<SQLExecuteResult> resultList = new ArrayList<>();
             for (Statement statement: statementList) {
+                if (statement == null) {
+                    continue;
+                }
                 switch (statement.get_type()) {
                     case CREATE_DATABASE:
                         resultList.add(createDatabase((CreatDatabaseStatement)statement, session));
@@ -903,7 +910,6 @@ public class Manager {
                 }
                 fileWriter.flush();
                 fileWriter.close();
-                System.out.println(logCnt);
                 if (logCnt >= Global.FLUSH_THRESHOLED && persist()) {
                     logCnt = 0;
                     File logFile = new File(Global.DATABASE_DIR+File.separator+"log");
