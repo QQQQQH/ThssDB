@@ -146,6 +146,7 @@ public class Manager {
                     return false;
                 }
             }
+            oos.close();
             return true;
         }
         catch (FileNotFoundException e) {
