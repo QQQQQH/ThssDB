@@ -30,3 +30,32 @@ select * from t2;
 
 -- client 1:
 commit;
+
+
+-- 插入数据
+insert into student(s_id, dept_name, tot_cred) values ('1', 'Math', 50);
+insert into student values('66008', 'Szczerban', 'Languages', 25);
+
+-- 删除数据
+select s_name from student where s_id = '66008';
+delete from student where s_id = '66008';
+select s_name from student where s_id = '66008';
+
+-- 更新数据
+select s_name from student where s_id = '76291';
+update student set s_name = 'Dell' where s_id = '76291';
+select s_name from student where s_id = '76291';
+
+-- 表的展示及删除
+show table advisor;
+drop table advisor;
+select s_id from advisor;
+
+-- 事务
+set auto commit false;
+begin transaction;
+insert into department values('thss', 'tsinghua', 1000000.00);
+-- 启动另一个客户端
+select building from department where dept_name = 'thss';
+commit;
+select building from department where dept_name = 'thss';

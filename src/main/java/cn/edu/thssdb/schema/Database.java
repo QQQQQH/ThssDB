@@ -143,15 +143,6 @@ public class Database {
                 throw new TableNotExistException();
             }
             tables.remove(tableName);
-            // remove table file
-            File serialFile = new File(Global.DATABASE_DIR+File.separator+name+File.separator+"data"+File.separator+tableName);
-            if (serialFile.exists() && !serialFile.delete()) {
-                System.err.println("Fail to remove serialization file!");
-            }
-            File schemaFile = new File(Global.DATABASE_DIR+File.separator+name+File.separator+tableName+"_SCHEMA");
-            if (schemaFile.exists() && !schemaFile.delete()) {
-                System.err.println("Fail to remove schema file!");
-            }
         }
         finally {
             lock.writeLock().unlock();

@@ -236,41 +236,20 @@ public class Manager {
 
     private static void deleteDatabase(String name, Session session) {
         // TODO
-//        try {
-            if (databases.get(name) == null) {
-                throw new DatabaseNotExistException();
-            }
+        if (databases.get(name) == null) {
+            throw new DatabaseNotExistException();
+        }
 
-            for (Session session_: sessionList) {
-                if (session_ != session && name.equals(session_.currentDatabase)) {
-                    throw new DatabaseIsBeingUsedException();
-                }
+        for (Session session_: sessionList) {
+            if (session_ != session && name.equals(session_.currentDatabase)) {
+                throw new DatabaseIsBeingUsedException();
             }
-            if (session != null && name.equals(session.currentDatabase)) {
-                session.currentDatabase = null;
-            }
+        }
+        if (session != null && name.equals(session.currentDatabase)) {
+            session.currentDatabase = null;
+        }
 
-            databases.remove(name);
-            // remove database file
-//            Path databaseDirector = Paths.get(Global.DATABASE_DIR+File.separator+name);
-//            Files.walkFileTree(databaseDirector, new SimpleFileVisitor<Path>() {
-//                @Override
-//                public FileVisitResult visitFile(Path file, BasicFileAttributes attributes) throws IOException {
-//                    Files.delete(file);
-//                    return FileVisitResult.CONTINUE;
-//                }
-//
-//                @Override
-//                public FileVisitResult postVisitDirectory(Path dir, IOException exc) throws IOException {
-//                    Files.delete(dir);
-//                    return FileVisitResult.CONTINUE;
-//                }
-//
-//            });
-//        }
-//        catch (IOException e) {
-//            System.err.println("Fail to remove database file!");
-//        }
+        databases.remove(name);
     }
 
     private static void switchDatabase(String name, Session session) {
@@ -436,6 +415,8 @@ public class Manager {
                     case UPDATE:
                         resultList.add(update((UpdateStatement)statement, session));
                         break;
+                    case SHOW_META:
+                        resultList.add(showTable((ShowMetaStatement)statement, session));
                     default:
                         resultList.add(new SQLExecuteResult("Error: SQL syntax not supported!", false, false));
                         break;
@@ -799,6 +780,32 @@ public class Manager {
                         "Query succeeds.",
                         queryResult.getAttrList(),
                         queryResult.getResultRowList()
+                );
+            }
+            catch (Exception e) {
+                return new SQLExecuteResult(e.getMessage(), false, false);
+            }
+        }
+
+        private SQLExecuteResult showTable(ShowMetaStatement statement, Session session) {
+            try {
+                Database database = getDatabase(session);
+                Table table = database.getTable(statement.tableName);
+
+                List<List<String>> schemaList = new ArrayList<>();
+                for (Column column: table.columns) {
+                    schemaList.add(column.getMetaList());
+                }
+
+                return new SQLExecuteResult(
+                        "Show schema succeeds.",
+                        new ArrayList<String>(){{
+                            add("Field");
+                            add("Type");
+                            add("Null");
+                            add("Key");
+                        }},
+                        schemaList
                 );
             }
             catch (Exception e) {
