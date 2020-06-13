@@ -57,5 +57,6 @@ begin transaction;
 insert into department values('thss', 'tsinghua', 1000000.00);
 -- 启动另一个客户端
 select building from department where dept_name = 'thss';
+-- 回到原客户端
 commit;
 select building from department where dept_name = 'thss';
