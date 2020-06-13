@@ -144,7 +144,7 @@ public class Table implements Iterable<Row> {
             return true;
         }
         catch (IOException e) {
-            System.err.print("Fail to serialize due to IOException!");
+            System.err.println("Fail to serialize due to IOException!");
             return false;
         }
     }

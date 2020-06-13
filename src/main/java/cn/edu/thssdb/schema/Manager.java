@@ -150,11 +150,11 @@ public class Manager {
             return true;
         }
         catch (FileNotFoundException e) {
-            System.err.print("Fail to persist manager due to FileNotFoundException!");
+            System.err.println("Fail to persist manager due to FileNotFoundException!");
             return false;
         }
         catch (IOException e) {
-            System.err.print("Fail to persist manager due to IOException!");
+            System.err.println("Fail to persist manager due to IOException!");
             return false;
         }
         finally {

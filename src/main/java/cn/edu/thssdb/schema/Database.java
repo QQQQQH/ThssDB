@@ -57,7 +57,7 @@ public class Database {
             return true;
         }
         catch (IOException e) {
-            System.err.print("Fail to persist database due to IOException!");
+            System.err.println("Fail to persist database due to IOException!");
             return false;
         }
         finally {
